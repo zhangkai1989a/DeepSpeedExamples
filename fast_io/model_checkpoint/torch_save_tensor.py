@@ -56,12 +56,12 @@ def test_ds_aio_save(file, buffer, use_zipfile):
         file_path=file, 
         aio_handle=h,
         pinned_tensor=pinned_memory)
-    torch.save(f=dsfw, obj=buffer, _use_new_zipfile_serialization=True)
+    torch.save(f=dsfw, obj=buffer, _use_new_zipfile_serialization=use_zipfile)
     write_sec = time.time() - st
     dsfw._dump_state()
     return write_sec
 
-def run(mb_size, folder):
+def run(mb_size, folder, legacy_save):
     buffer = torch.randint(high=128, size=(mb_size*(1024**2), ), dtype=torch.uint8, device='cpu').pin_memory()
 
     fn_dict = {
@@ -76,7 +76,7 @@ def run(mb_size, folder):
         if os.path.isfile(file):
             os.remove(file)
         st = time.time()
-        write_sec = fn(file, buffer, True)
+        write_sec = fn(file, buffer, not legacy_save)
         gb_per_sec = mb_size/(1024.0*write_sec)
         gb_size = os.path.getsize(file)/(1024**3)
         print(f'{tag} -- {gb_size:5.2f} GB, {write_sec:5.2f} secs, {gb_per_sec:5.2f} gb/s')
@@ -94,6 +94,10 @@ def parse_arguments():
                         default=None,
                         required=True,
                         help='Size of tensor to save in MB.')
+    parser.add_argument('--legacy',
+                        action='store_true',
+                        help='Use torch legacy save format')
+
     args = parser.parse_args()
     print(f'args = {args}')
     return args
@@ -106,7 +110,7 @@ def main():
     if not os.path.exists(args.folder):
         print(f'Invalid folder: {args.folder}')
         quit()
-    run(args.mb_size, args.folder)
+    run(args.mb_size, args.folder, args.legacy)
     
 
 if __name__ == "__main__":

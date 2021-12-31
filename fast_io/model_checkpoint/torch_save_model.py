@@ -70,12 +70,12 @@ def test_ds_aio_save(file, buffer, use_zipfile):
         file_path=file, 
         aio_handle=h,
         pinned_tensor=pinned_memory)
-    torch.save(f=dsfw, obj=buffer, _use_new_zipfile_serialization=True)
+    torch.save(f=dsfw, obj=buffer, _use_new_zipfile_serialization=use_zipfile)
     write_sec = time.time() - st
     dsfw._dump_state()
     return write_sec
 
-def run(model, model_name, ckpt_name, folder):
+def run(model, model_name, ckpt_name, folder, legacy_save):
     print(f'Model name = {model_name}')
     fn_dict = {
         'test_save': test_save, 
@@ -89,7 +89,7 @@ def run(model, model_name, ckpt_name, folder):
         if os.path.isfile(file):
             os.remove(file)
         st = time.time()
-        write_sec = fn(file, model, True)
+        write_sec = fn(file, model, not legacy_save)
         ckpt_size = os.path.getsize(file)
         gb_size = ckpt_size/(1024**3)
         gb_per_sec = gb_size/write_sec
@@ -106,6 +106,10 @@ def parse_arguments():
     parser.add_argument('--big_model',
                         action='store_true',
                         help='Use EleutherAI/gpt-j-6B for checkpointing.')
+    parser.add_argument('--legacy',
+                        action='store_true',
+                        help='Use torch legacy save format')
+
     args = parser.parse_args()
     print(f'args = {args}')
     return args
@@ -121,7 +125,7 @@ def main():
         quit()
     model, model_name, ckpt_name = _get_model(args.big_model)
     
-    run(model, model_name, ckpt_name, args.folder)
+    run(model, model_name, ckpt_name, args.folder, args.legacy)
     
 
 if __name__ == "__main__":
