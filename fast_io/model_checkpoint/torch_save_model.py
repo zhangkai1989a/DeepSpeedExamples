@@ -37,13 +37,13 @@ def _get_aio_handle():
         num_threads=AIO_THREAD_COUNT)
     return h
 
-def test_save(file, buffer, use_zipfile):
+def test_save(file, buffer, use_zipfile, io_buffer_mb):
     st = time.time()
     torch.save(f=file, obj=buffer, _use_new_zipfile_serialization=use_zipfile)
     return time.time() - st
 
 
-def test_ds_mock_save(file, buffer, use_zipfile):
+def test_ds_mock_save(file, buffer, use_zipfile, io_buffer_mb):
     from deepspeed.io import MockFileWriter
     st = time.time()
     dsmw = MockFileWriter(file)
@@ -52,7 +52,7 @@ def test_ds_mock_save(file, buffer, use_zipfile):
     dsmw._dump_state()
     return write_sec 
 
-def test_ds_py_save(file, buffer, use_zipfile):
+def test_ds_py_save(file, buffer, use_zipfile, io_buffer_mb):
     from deepspeed.io import PyFileWriter
     st = time.time()
     dspw = PyFileWriter(file)   
@@ -61,9 +61,9 @@ def test_ds_py_save(file, buffer, use_zipfile):
     dspw._dump_state()
     return write_sec 
 
-def test_ds_aio_save(file, buffer, use_zipfile):
+def test_ds_aio_save(file, buffer, use_zipfile, io_buffer_mb):
     h = _get_aio_handle()
-    pinned_memory = torch.zeros(PINNED_BUFFER_MB*(1024**2), dtype=torch.uint8, device='cpu').pin_memory()                                            
+    pinned_memory = torch.zeros(io_buffer_mb*(1024**2), dtype=torch.uint8, device='cpu').pin_memory()                                            
     from deepspeed.io import DeepSpeedFileWriter as dsfw
     st = time.time()
     dsfw = dsfw(
@@ -75,7 +75,7 @@ def test_ds_aio_save(file, buffer, use_zipfile):
     dsfw._dump_state()
     return write_sec
 
-def run(model, model_name, ckpt_name, folder, legacy_save):
+def run(model, model_name, ckpt_name, folder, legacy_save, io_buffer_mb):
     print(f'Model name = {model_name}')
     fn_dict = {
         'test_save': test_save, 
@@ -89,7 +89,7 @@ def run(model, model_name, ckpt_name, folder, legacy_save):
         if os.path.isfile(file):
             os.remove(file)
         st = time.time()
-        write_sec = fn(file, model, not legacy_save)
+        write_sec = fn(file, model, not legacy_save, io_buffer_mb)
         ckpt_size = os.path.getsize(file)
         gb_size = ckpt_size/(1024**3)
         gb_per_sec = gb_size/write_sec
@@ -109,6 +109,12 @@ def parse_arguments():
     parser.add_argument('--legacy',
                         action='store_true',
                         help='Use torch legacy save format')
+    
+    parser.add_argument('--io_buffer_mb',
+                        type=int,
+                        default=PINNED_BUFFER_MB,
+                        required=True,
+                        help='Size of pinned i/o buffer in MB.')
 
     args = parser.parse_args()
     print(f'args = {args}')
@@ -125,7 +131,7 @@ def main():
         quit()
     model, model_name, ckpt_name = _get_model(args.big_model)
     
-    run(model, model_name, ckpt_name, args.folder, args.legacy)
+    run(model, model_name, ckpt_name, args.folder, args.legacy, args.io_buffer_mb)
     
 
 if __name__ == "__main__":
