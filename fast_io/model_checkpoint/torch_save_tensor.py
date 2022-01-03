@@ -56,12 +56,13 @@ def test_ds_aio_save(file, buffer, use_zipfile, io_buffer_mb):
         aio_handle=h,
         pinned_tensor=pinned_memory)
     torch.save(f=dsfw, obj=buffer, _use_new_zipfile_serialization=use_zipfile)
+    dsfw.close() # Force flush to storage
     write_sec = time.time() - st
     dsfw._dump_state()
     return write_sec
 
 def run(mb_size, folder, legacy_save, io_buffer_mb):
-    buffer = torch.randint(high=128, size=(mb_size*(1024**2), ), dtype=torch.uint8, device='cpu') # .pin_memory() 
+    buffer = torch.randint(high=128, size=(mb_size*(1024**2), ), dtype=torch.uint8, device='cpu')
 
     fn_dict = {
         'test_save': test_save, 
