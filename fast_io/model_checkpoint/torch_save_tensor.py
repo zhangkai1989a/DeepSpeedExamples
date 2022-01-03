@@ -28,7 +28,7 @@ def test_save(file, buffer, use_zipfile, io_buffer_mb):
     return time.time() - st
 
 
-def test_ds_mock_save(file, buffer, use_zipfile):
+def test_ds_mock_save(file, buffer, use_zipfile, io_buffer_mb):
     from deepspeed.io import MockFileWriter
     st = time.time()
     dsmw = MockFileWriter(file)
