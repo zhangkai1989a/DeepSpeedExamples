@@ -110,6 +110,10 @@ def parse_arguments():
 
     parser.add_argument('--gpu', action='store_true', help='Use gpu tensors.')
 
+    parser.add_argument('--half',
+                        action='store_true',
+                        help='Use half-precision tensors.')
+
     parser.add_argument('--io_buffer_mb',
                         type=int,
                         default=PINNED_BUFFER_MB,
@@ -130,6 +134,11 @@ def validate_arguments(args):
         print(f'{args.model} is not a supported HF model tag')
         success = False
 
+    if args.optimizer and args.half:
+        if not args.gpu:
+            print(f'mixed precision only supported with gpu tensors')
+            success = False
+
     return success
 
 
@@ -143,14 +152,14 @@ def main():
         quit()
 
     model, model_name, ckpt_name = _get_model(args.model)
+    if args.half:
+        model = model.half()
+    if args.gpu:
+        model = model.cuda()
     if args.optimizer:
-        model = model.half().cuda()
         optimizer = _get_initialized_optimizer(model, args.fused)
         ckpt_state = {'model': model, 'optimizer': optimizer}
     else:
-        model = model.half()
-        if args.gpu:
-            model = model.cuda()
         ckpt_state = {'model': model}
     run(ckpt_state, model_name, ckpt_name, args.folder, args.legacy,
         args.io_buffer_mb)
