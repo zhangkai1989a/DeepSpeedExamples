@@ -2,6 +2,7 @@ import time
 import torch
 import os
 import shutil
+import gc
 import deepspeed
 from save_model_utils import get_model, validate_arguments, parse_arguments
 
@@ -57,6 +58,16 @@ def _do_optimizer_step(ds_engine):
     ds_engine.step()
 
 
+def _free_ds_memory(ds_engine):
+    ds_engine.optimizer.optimizer = None
+    ds_engine.optimizer = None
+    ds_engine.module = None
+    ds_engine = None
+    del ds_engine
+    gc.collect()
+    torch.cuda.empty_cache()
+
+
 def test_save(tag, folder, model, args, writer_type):
     ds_config = _get_ds_config(args, writer_type)
     ds_engine = _get_ds_engine(model, ds_config)
@@ -66,6 +77,7 @@ def test_save(tag, folder, model, args, writer_type):
     st = time.time()
     ds_engine.save_checkpoint(save_dir=folder, tag=tag)
     write_sec = time.time() - st
+    _free_ds_memory(ds_engine)
     return write_sec
 
 
