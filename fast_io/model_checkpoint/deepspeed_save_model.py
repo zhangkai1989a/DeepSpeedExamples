@@ -3,6 +3,8 @@ import torch
 import os
 import shutil
 import gc
+import random
+import numpy as np
 import deepspeed
 from save_model_utils import get_model, validate_arguments, parse_arguments
 
@@ -116,7 +118,8 @@ def main():
     )
     print(f'torch version = {torch.__version__}')
     torch.manual_seed(42)
-
+    np.random.seed(0)
+    random.seed(0)
     args = parse_arguments()
     if not validate_arguments(args):
         quit()
