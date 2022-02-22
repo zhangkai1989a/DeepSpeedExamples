@@ -6,8 +6,7 @@ from torch_save_utils import test_save, test_ds_mock_save, test_ds_py_save, test
 from save_model_utils import get_model, validate_arguments, parse_arguments
 
 
-def run(model, model_name, ckpt_name, folder, legacy_save, io_buffer_mb,
-        show_statistics):
+def run(model, model_name, ckpt_name, args):
     print(f'Model name = {model_name}')
     fn_dict = {
         'test_save': test_save,
@@ -16,13 +15,12 @@ def run(model, model_name, ckpt_name, folder, legacy_save, io_buffer_mb,
         'test_ds_fast_save': test_ds_fast_save
     }
     for tag, fn in fn_dict.items():
-        file = os.path.join(folder, f'{tag}_{ckpt_name}.pt')
+        file = os.path.join(args.folder, f'{tag}_{ckpt_name}.pt')
         print(f'checkpoint file = {file}')
         if os.path.isfile(file):
             os.remove(file)
         st = time.time()
-        write_sec = fn(file, model, not legacy_save, io_buffer_mb,
-                       show_statistics)
+        write_sec = fn(file, model, args)
         ckpt_size = os.path.getsize(file)
         gb_size = ckpt_size / (1024**3)
         gb_per_sec = gb_size / write_sec
@@ -67,8 +65,7 @@ def main():
         ckpt_state = {'model': model, 'optimizer': optimizer}
     else:
         ckpt_state = {'model': model}
-    run(ckpt_state, model_name, ckpt_name, args.folder, args.legacy,
-        args.io_buffer_mb, not args.no_statistics)
+    run(ckpt_state, model_name, ckpt_name, args)
 
 
 if __name__ == "__main__":

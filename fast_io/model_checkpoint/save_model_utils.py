@@ -109,6 +109,10 @@ def parse_arguments():
                         action='store_true',
                         help='Suppress low-level performance statistics.')
 
+    parser.add_argument('--single_io_buffer',
+                        action='store_true',
+                        help='Disable double buffering of i/o buffer.')
+
     args = parser.parse_args()
     print(f'args = {args}')
     return args

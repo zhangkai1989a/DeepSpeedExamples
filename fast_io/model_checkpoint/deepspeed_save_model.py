@@ -41,7 +41,8 @@ def _get_ds_config(args, writer_type):
         ds_config["checkpoint"]["writer"] = {
             "type": writer_type,
             "io_buffer_size": args.io_buffer_mb * (1024**2),
-            "show_statistics": not args.no_statistics
+            "io_buffer_double": not args.single_io_buffer,
+            "show_statistics": not args.no_statistics,
         }
 
     return ds_config

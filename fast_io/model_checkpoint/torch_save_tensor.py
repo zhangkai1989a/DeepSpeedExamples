@@ -25,8 +25,7 @@ def run(args):
         if os.path.isfile(file):
             os.remove(file)
         st = time.time()
-        write_sec = fn(file, buffer, not args.legacy, args.io_buffer_mb,
-                       not args.no_statistics)
+        write_sec = fn(file, buffer, args)
         gb_per_sec = args.mb_size / (1024.0 * write_sec)
         gb_size = os.path.getsize(file) / (1024**3)
         print(
@@ -61,6 +60,10 @@ def parse_arguments():
     parser.add_argument('--no-statistics',
                         action='store_true',
                         help='Suppress low-level performance statistics.')
+
+    parser.add_argument('--single_io_buffer',
+                        action='store_true',
+                        help='Disable double buffering of i/o buffer.')
 
     args = parser.parse_args()
     print(f'args = {args}')
