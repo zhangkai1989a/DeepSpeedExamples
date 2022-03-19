@@ -38,7 +38,7 @@ from megatron.model import get_params_for_weight_decay_optimization
 from megatron.model.realm_model import ICTBertModel
 from megatron.utils import check_adlr_autoresume_termination
 from megatron.utils import make_data_loader
-from megatron.utils import report_memory, flops_calculator
+from megatron.utils import report_memory, flops_calculator, throughput_calculator, checkpoint_throughput_calculator
 
 import deepspeed
 from deepspeed.runtime.utils import see_memory_usage
@@ -384,6 +384,7 @@ def training_log(loss_dict, total_loss_dict, learning_rate, iteration,
     add_to_logging('backward-clip-grad')
     add_to_logging('optimizer')
     add_to_logging('batch generator')
+    add_to_logging('save checkpoint')
 
     # Tensorboard values.
     if writer and torch.distributed.get_rank() == 0:
@@ -423,12 +424,14 @@ def training_log(loss_dict, total_loss_dict, learning_rate, iteration,
             total_loss_dict[got_nan_key])
         total_loss_dict[skipped_iters_key] = 0
         total_loss_dict[got_nan_key] = 0
+        timers.log(timers_to_log, normalizer=args.log_interval)
         print_rank_0(log_string)
         if report_memory_flag:
             report_memory('after {} iterations'.format(iteration))
             report_memory_flag = False
-        timers.log(timers_to_log, normalizer=args.log_interval)
+
         flops_calculator(model, args, elapsed_time)
+        throughput_calculator(model, args, elapsed_time)      
 
     return report_memory_flag
 
@@ -462,11 +465,6 @@ def train(forward_step_func, model, optimizer, lr_scheduler,
         loss_scale = None
         if args.fp16:
             loss_scale = optimizer.cur_scale if args.deepspeed else optimizer.loss_scale
-        report_memory_flag = training_log(loss_dict, total_loss_dict,
-                                          optimizer.param_groups[0]['lr'],
-                                          iteration, loss_scale,
-                                          report_memory_flag, skipped_iter,
-                                          model=model)
 
         # Autoresume
         if args.adlr_autoresume and \
@@ -475,9 +473,21 @@ def train(forward_step_func, model, optimizer, lr_scheduler,
                                               lr_scheduler)
 
         # Checkpointing
-        if args.save and args.save_interval and \
-           iteration % args.save_interval == 0:
+        should_save_checkpoint = args.save and args.save_interval and \
+           iteration % args.save_interval == 0           
+        timers('save checkpoint').start()
+        if should_save_checkpoint:
             save_checkpoint(iteration, model, optimizer, lr_scheduler)
+        timers('save checkpoint').stop()
+
+        if should_save_checkpoint:
+            checkpoint_throughput_calculator(model, args, timers('save checkpoint').elapsed(reset=False))
+
+        report_memory_flag = training_log(loss_dict, total_loss_dict,
+                                          optimizer.param_groups[0]['lr'],
+                                          iteration, loss_scale,
+                                          report_memory_flag, skipped_iter,
+                                          model=model)
 
         # Evaluation
         # XXX temporarily disabled for ZeRO-3
