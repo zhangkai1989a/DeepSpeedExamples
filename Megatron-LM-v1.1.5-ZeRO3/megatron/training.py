@@ -106,8 +106,8 @@ def pretrain(train_valid_test_dataset_provider, model_provider,
                                    valid_data_iterator, model,
                                    iteration, False)
 
-    if args.save and iteration != 0:
-        save_checkpoint(iteration, model, optimizer, lr_scheduler)
+#    if args.save and iteration != 0:
+#        save_checkpoint(iteration, model, optimizer, lr_scheduler)
 
     if args.do_test:
         # Run on test data.
@@ -175,8 +175,8 @@ def get_optimizer(model):
                                        weight_decay=args.weight_decay)
     else:
         # Use torch Adam instead of Fused Adam from NVIDIA which seems to have some issue.
-        #optimizer = Adam(param_groups,
-        optimizer = torch.optim.AdamW(param_groups,
+        optimizer = Adam(param_groups,
+        #optimizer = torch.optim.AdamW(param_groups,
                          lr=args.lr,
                          weight_decay=args.weight_decay,
                          betas=(args.adam_beta1, args.adam_beta2),
