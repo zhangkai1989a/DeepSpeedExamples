@@ -1,0 +1,13 @@
+Performance test of deepspeed integration of fast model checkpointing.
+torch version = 1.12.0+cu113
+args = Namespace(cpu_offload=False, folder='/home/guanhuawang/eclipse', fused=False, gpu=False, half=True, io_buffer_mb=1024, legacy=True, model='gpt2-large', no_statistics=False, optimizer=False, single_io_buffer=True, zero_stage=0)
+Model name = gpt2-large
+[2022-09-22 01:22:52,520] [INFO] [logging.py:68:log_dist] [Rank -1] DeepSpeed info: version=0.7.4+74104af1, git-hash=74104af1, git-branch=staging-fast-model-checkpoint-v3
+[2022-09-22 01:22:52,524] [INFO] [comm.py:617:init_distributed] Not using the DeepSpeed or dist launchers, attempting to detect MPI environment...
+[2022-09-22 01:22:53,396] [INFO] [comm.py:669:mpi_discovery] Discovered MPI settings of world_rank=0, local_rank=0, world_size=1, master_addr=192.168.1.46, master_port=29500
+[2022-09-22 01:22:53,397] [INFO] [comm.py:633:init_distributed] Initializing TorchBackend in DeepSpeed with backend nccl
+[2022-09-22 01:22:53,400] [WARNING] [config_utils.py:63:_process_deprecated_field] Config parameter cpu_offload is deprecated use offload_optimizer instead
+NCCL version 2.10.3+cuda11.3
+[2022-09-22 01:22:56,452] [INFO] [logging.py:68:log_dist] [Rank 0] DeepSpeed Flops Profiler Enabled: False
+[2022-09-22 01:22:56,454] [INFO] [logging.py:68:log_dist] [Rank 0] Using DeepSpeed Optimizer param name adam as basic optimizer
+[2022-09-22 01:22:56,482] [INFO] [logging.py:68:log_dist] [Rank 0] DeepSpeed Basic Optimizer = {basic_optimizer.__class__.__name__}
