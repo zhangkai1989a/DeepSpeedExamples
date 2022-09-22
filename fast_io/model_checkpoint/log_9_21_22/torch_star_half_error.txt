@@ -2,12 +2,71 @@ Performance test of deepspeed integration of fast model checkpointing.
 torch version = 1.12.0+cu113
 args = Namespace(cpu_offload=False, folder='/home/guanhuawang/eclipse', fused=False, gpu=False, half=True, io_buffer_mb=1024, legacy=True, model='gpt2-large', no_statistics=False, optimizer=False, single_io_buffer=True, zero_stage=0)
 Model name = gpt2-large
-[2022-09-22 01:22:52,520] [INFO] [logging.py:68:log_dist] [Rank -1] DeepSpeed info: version=0.7.4+74104af1, git-hash=74104af1, git-branch=staging-fast-model-checkpoint-v3
-[2022-09-22 01:22:52,524] [INFO] [comm.py:617:init_distributed] Not using the DeepSpeed or dist launchers, attempting to detect MPI environment...
-[2022-09-22 01:22:53,396] [INFO] [comm.py:669:mpi_discovery] Discovered MPI settings of world_rank=0, local_rank=0, world_size=1, master_addr=192.168.1.46, master_port=29500
-[2022-09-22 01:22:53,397] [INFO] [comm.py:633:init_distributed] Initializing TorchBackend in DeepSpeed with backend nccl
-[2022-09-22 01:22:53,400] [WARNING] [config_utils.py:63:_process_deprecated_field] Config parameter cpu_offload is deprecated use offload_optimizer instead
+[2022-09-22 01:29:33,721] [INFO] [logging.py:68:log_dist] [Rank -1] DeepSpeed info: version=0.7.4+74104af1, git-hash=74104af1, git-branch=staging-fast-model-checkpoint-v3
+[2022-09-22 01:29:33,725] [INFO] [comm.py:617:init_distributed] Not using the DeepSpeed or dist launchers, attempting to detect MPI environment...
+--------------------------------------------------------------------------
+WARNING: No preset parameters were found for the device that Open MPI
+detected:
+
+  Local host:            azwuse57c00009D
+  Device name:           mlx5_ib0
+  Device vendor ID:      0x02c9
+  Device vendor part ID: 4124
+
+Default device parameters will be used, which may result in lower
+performance.  You can edit any of the files specified by the
+btl_openib_device_param_files MCA parameter to set values for your
+device.
+
+NOTE: You can turn off this warning by setting the MCA parameter
+      btl_openib_warn_no_device_params_found to 0.
+--------------------------------------------------------------------------
+--------------------------------------------------------------------------
+By default, for Open MPI 4.0 and later, infiniband ports on a device
+are not used by default.  The intent is to use UCX for these devices.
+You can override this policy by setting the btl_openib_allow_ib MCA parameter
+to true.
+
+  Local host:              azwuse57c00009D
+  Local adapter:           mlx5_ib0
+  Local port:              1
+
+--------------------------------------------------------------------------
+--------------------------------------------------------------------------
+WARNING: There was an error initializing an OpenFabrics device.
+
+  Local host:   azwuse57c00009D
+  Local device: mlx5_ib4
+--------------------------------------------------------------------------
+[2022-09-22 01:29:34,587] [INFO] [comm.py:669:mpi_discovery] Discovered MPI settings of world_rank=0, local_rank=0, world_size=1, master_addr=192.168.1.46, master_port=29500
+[2022-09-22 01:29:34,587] [INFO] [comm.py:633:init_distributed] Initializing TorchBackend in DeepSpeed with backend nccl
+[2022-09-22 01:29:34,591] [WARNING] [config_utils.py:63:_process_deprecated_field] Config parameter cpu_offload is deprecated use offload_optimizer instead
 NCCL version 2.10.3+cuda11.3
-[2022-09-22 01:22:56,452] [INFO] [logging.py:68:log_dist] [Rank 0] DeepSpeed Flops Profiler Enabled: False
-[2022-09-22 01:22:56,454] [INFO] [logging.py:68:log_dist] [Rank 0] Using DeepSpeed Optimizer param name adam as basic optimizer
-[2022-09-22 01:22:56,482] [INFO] [logging.py:68:log_dist] [Rank 0] DeepSpeed Basic Optimizer = {basic_optimizer.__class__.__name__}
+[2022-09-22 01:29:38,429] [INFO] [logging.py:68:log_dist] [Rank 0] DeepSpeed Flops Profiler Enabled: False
+[2022-09-22 01:29:38,430] [INFO] [logging.py:68:log_dist] [Rank 0] Using DeepSpeed Optimizer param name adam as basic optimizer
+[2022-09-22 01:29:38,461] [INFO] [logging.py:68:log_dist] [Rank 0] DeepSpeed Basic Optimizer = {basic_optimizer.__class__.__name__}
+Traceback (most recent call last):
+  File "deepspeed_save_model.py", line 133, in <module>
+    main()
+  File "deepspeed_save_model.py", line 129, in main
+    run(model, model_name, ckpt_name, args)
+  File "deepspeed_save_model.py", line 106, in run
+    write_sec = test_save(tag, folder, model, args, writer_type)
+  File "deepspeed_save_model.py", line 76, in test_save
+    ds_engine = _get_ds_engine(model, ds_config)
+  File "deepspeed_save_model.py", line 52, in _get_ds_engine
+    ds_engine, _, _, _ = deepspeed.initialize(
+  File "/home/guanhuawang/DeepSpeed-internal/deepspeed/__init__.py", line 124, in initialize
+    engine = DeepSpeedEngine(args=args,
+  File "/home/guanhuawang/DeepSpeed-internal/deepspeed/runtime/engine.py", line 322, in __init__
+    self._configure_optimizer(optimizer, model_parameters)
+  File "/home/guanhuawang/DeepSpeed-internal/deepspeed/runtime/engine.py", line 1178, in _configure_optimizer
+    self.optimizer = self._configure_fp16_optimizer(basic_optimizer)
+  File "/home/guanhuawang/DeepSpeed-internal/deepspeed/runtime/engine.py", line 1314, in _configure_fp16_optimizer
+    or self.fp16_fused_mode() \
+  File "/home/guanhuawang/DeepSpeed-internal/deepspeed/runtime/engine.py", line 792, in fp16_fused_mode
+    return self._config.fp16_fused_mode
+AttributeError: 'DeepSpeedConfig' object has no attribute 'fp16_fused_mode'
+[azwuse57c00009D:37114] 4 more processes have sent help message help-mpi-btl-openib.txt / no device params found
+[azwuse57c00009D:37114] Set MCA parameter "orte_base_help_aggregate" to 0 to see all help / error messages
+[azwuse57c00009D:37114] 4 more processes have sent help message help-mpi-btl-openib.txt / ib port not selected
