@@ -72,6 +72,11 @@ def parse_arguments():
         required=True,
         help='Hugging Face transformers tag of model (e.g., gpt2).')
 
+    parser.add_argument('--local_rank',
+                        type=int,
+                        default=0,
+                        help='Local rank' )
+
     parser.add_argument('--legacy',
                         action='store_true',
                         help='Use torch legacy save format')
