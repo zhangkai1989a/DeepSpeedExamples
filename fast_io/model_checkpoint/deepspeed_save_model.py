@@ -102,7 +102,7 @@ def run(model, model_name, ckpt_name, args):
     for tag, writer_type in writer_dict.items():
         folder = os.path.join(args.folder, ckpt_name, tag)
         if os.path.exists(folder):
-            shutil.rmtree(folder)
+            shutil.rmtree(folder, ignore_errors=True)
         write_sec = test_save(tag, folder, model, args, writer_type)
         ckpt_size = _get_folder_size(folder)
         gb_size = ckpt_size / (1024**3)
