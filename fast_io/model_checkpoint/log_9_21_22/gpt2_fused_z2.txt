@@ -1,0 +1,781 @@
+Performance test of deepspeed integration of fast model checkpointing.
+torch version = 1.12.0+cu113
+args = Namespace(cpu_offload=False, folder='/home/guanhuawang/eclipse', fused=True, gpu=False, half=True, io_buffer_mb=1024, legacy=True, model='gpt2-large', no_statistics=False, optimizer=False, single_io_buffer=True, zero_stage=2)
+Model name = gpt2-large
+[2022-09-21 18:45:23,129] [INFO] [logging.py:60:log_dist] [Rank -1] DeepSpeed info: version=0.4.1+a4269a63, git-hash=a4269a63, git-branch=guanhua/staging-fast-ckpt-v2
+[2022-09-21 18:45:23,130] [INFO] [distributed.py:36:init_distributed] Not using the DeepSpeed or torch.distributed launchers, attempting to detect MPI environment...
+[2022-09-21 18:45:23,991] [INFO] [distributed.py:83:mpi_discovery] Discovered MPI settings of world_rank=0, local_rank=0, world_size=1, master_addr=192.168.1.46, master_port=29500
+[2022-09-21 18:45:23,991] [INFO] [distributed.py:46:init_distributed] Initializing torch distributed with backend: nccl
+[2022-09-21 18:45:27,189] [INFO] [utils.py:11:_initialize_parameter_parallel_groups] data_parallel_size: 1, parameter_parallel_size: 1
+NCCL version 2.10.3+cuda11.3
+[2022-09-21 18:45:27,478] [INFO] [engine.py:176:__init__] DeepSpeed Flops Profiler Enabled: False
+Using /home/guanhuawang/.cache/torch_extensions/py38_cu113 as PyTorch extensions root...
+Creating extension directory /home/guanhuawang/.cache/torch_extensions/py38_cu113/fused_adam...
+Detected CUDA files, patching ldflags
+Emitting ninja build file /home/guanhuawang/.cache/torch_extensions/py38_cu113/fused_adam/build.ninja...
+Building extension module fused_adam...
+Allowing ninja to set a default number of workers... (overridable by setting the environment variable MAX_JOBS=N)
+[1/3] /usr/local/cuda/bin/nvcc  -DTORCH_EXTENSION_NAME=fused_adam -DTORCH_API_INCLUDE_EXTENSION_H -DPYBIND11_COMPILER_TYPE=\"_gcc\" -DPYBIND11_STDLIB=\"_libstdcpp\" -DPYBIND11_BUILD_ABI=\"_cxxabi1013\" -I/home/guanhuawang/DeepSpeed-internal/deepspeed/ops/csrc/includes -isystem /opt/conda/envs/ptca/lib/python3.8/site-packages/torch/include -isystem /opt/conda/envs/ptca/lib/python3.8/site-packages/torch/include/torch/csrc/api/include -isystem /opt/conda/envs/ptca/lib/python3.8/site-packages/torch/include/TH -isystem /opt/conda/envs/ptca/lib/python3.8/site-packages/torch/include/THC -isystem /usr/local/cuda/include -isystem /opt/conda/envs/ptca/include/python3.8 -D_GLIBCXX_USE_CXX11_ABI=0 -D__CUDA_NO_HALF_OPERATORS__ -D__CUDA_NO_HALF_CONVERSIONS__ -D__CUDA_NO_BFLOAT16_CONVERSIONS__ -D__CUDA_NO_HALF2_OPERATORS__ --expt-relaxed-constexpr -gencode=arch=compute_80,code=compute_80 -gencode=arch=compute_80,code=sm_80 --compiler-options '-fPIC' -lineinfo -O3 --use_fast_math -DVERSION_GE_1_1 -DVERSION_GE_1_3 -DVERSION_GE_1_5 -gencode=arch=compute_80,code=sm_80 -gencode=arch=compute_80,code=compute_80 -std=c++14 -c /home/guanhuawang/DeepSpeed-internal/deepspeed/ops/csrc/adam/multi_tensor_adam.cu -o multi_tensor_adam.cuda.o 
+[2/3] c++ -MMD -MF fused_adam_frontend.o.d -DTORCH_EXTENSION_NAME=fused_adam -DTORCH_API_INCLUDE_EXTENSION_H -DPYBIND11_COMPILER_TYPE=\"_gcc\" -DPYBIND11_STDLIB=\"_libstdcpp\" -DPYBIND11_BUILD_ABI=\"_cxxabi1013\" -I/home/guanhuawang/DeepSpeed-internal/deepspeed/ops/csrc/includes -isystem /opt/conda/envs/ptca/lib/python3.8/site-packages/torch/include -isystem /opt/conda/envs/ptca/lib/python3.8/site-packages/torch/include/torch/csrc/api/include -isystem /opt/conda/envs/ptca/lib/python3.8/site-packages/torch/include/TH -isystem /opt/conda/envs/ptca/lib/python3.8/site-packages/torch/include/THC -isystem /usr/local/cuda/include -isystem /opt/conda/envs/ptca/include/python3.8 -D_GLIBCXX_USE_CXX11_ABI=0 -fPIC -std=c++14 -O3 -std=c++14 -g -Wno-reorder -DVERSION_GE_1_1 -DVERSION_GE_1_3 -DVERSION_GE_1_5 -c /home/guanhuawang/DeepSpeed-internal/deepspeed/ops/csrc/adam/fused_adam_frontend.cpp -o fused_adam_frontend.o 
+[3/3] c++ fused_adam_frontend.o multi_tensor_adam.cuda.o -shared -L/opt/conda/envs/ptca/lib/python3.8/site-packages/torch/lib -lc10 -lc10_cuda -ltorch_cpu -ltorch_cuda_cu -ltorch_cuda_cpp -ltorch -ltorch_python -L/usr/local/cuda/lib64 -lcudart -o fused_adam.so
+Loading extension module fused_adam...
+Time to load fused_adam op: 19.252447843551636 seconds
+[2022-09-21 18:45:47,263] [INFO] [engine.py:706:_configure_optimizer] Using DeepSpeed Optimizer param name adam as basic optimizer
+[2022-09-21 18:45:47,263] [INFO] [engine.py:711:_configure_optimizer] DeepSpeed Basic Optimizer = FusedAdam
+Checking ZeRO support for optimizer=FusedAdam type=<class 'deepspeed.ops.adam.fused_adam.FusedAdam'>
+[2022-09-21 18:45:47,263] [INFO] [logging.py:60:log_dist] [Rank 0] Creating fp16 ZeRO stage 2 optimizer
+[2022-09-21 18:45:47,263] [INFO] [stage2.py:105:__init__] Reduce bucket size 500000000
+[2022-09-21 18:45:47,263] [INFO] [stage2.py:106:__init__] Allgather bucket size 500000000
+[2022-09-21 18:45:47,263] [INFO] [stage2.py:107:__init__] CPU Offload: False
+Using /home/guanhuawang/.cache/torch_extensions/py38_cu113 as PyTorch extensions root...
+Emitting ninja build file /home/guanhuawang/.cache/torch_extensions/py38_cu113/utils/build.ninja...
+Building extension module utils...
+Allowing ninja to set a default number of workers... (overridable by setting the environment variable MAX_JOBS=N)
+ninja: no work to do.
+Loading extension module utils...
+Time to load utils op: 0.3341379165649414 seconds
+[2022-09-21 18:45:47,651] [INFO] [utils.py:588:see_memory_usage] Before moving param group 0 to CPU
+[2022-09-21 18:45:47,652] [INFO] [utils.py:589:see_memory_usage] MA 1.48 GB         Max_MA 1.48 GB         CA 1.61 GB         Max_CA 2 GB 
+[2022-09-21 18:45:47,652] [INFO] [utils.py:597:see_memory_usage] CPU Virtual Memory:  used = 22.58 GB, percent = 1.3%
+[2022-09-21 18:45:47,945] [INFO] [utils.py:588:see_memory_usage] After moving param group 0 to CPU
+[2022-09-21 18:45:47,946] [INFO] [utils.py:589:see_memory_usage] MA 0.04 GB         Max_MA 1.48 GB         CA 1.61 GB         Max_CA 2 GB 
+[2022-09-21 18:45:47,946] [INFO] [utils.py:597:see_memory_usage] CPU Virtual Memory:  used = 23.58 GB, percent = 1.3%
+[2022-09-21 18:45:48,634] [INFO] [utils.py:588:see_memory_usage] After flattening and moving param group 0 to GPU
+[2022-09-21 18:45:48,635] [INFO] [utils.py:589:see_memory_usage] MA 1.48 GB         Max_MA 1.48 GB         CA 3.06 GB         Max_CA 3 GB 
+[2022-09-21 18:45:48,635] [INFO] [utils.py:597:see_memory_usage] CPU Virtual Memory:  used = 23.52 GB, percent = 1.3%
+[2022-09-21 18:45:48,681] [INFO] [utils.py:588:see_memory_usage] After Flattening and after emptying param group 0 cache
+[2022-09-21 18:45:48,682] [INFO] [utils.py:589:see_memory_usage] MA 1.48 GB         Max_MA 1.48 GB         CA 3.06 GB         Max_CA 3 GB 
+[2022-09-21 18:45:48,682] [INFO] [utils.py:597:see_memory_usage] CPU Virtual Memory:  used = 23.53 GB, percent = 1.3%
+[2022-09-21 18:45:48,733] [INFO] [utils.py:588:see_memory_usage] Before creating fp32 master weights for param group 0
+[2022-09-21 18:45:48,734] [INFO] [utils.py:589:see_memory_usage] MA 1.48 GB         Max_MA 1.48 GB         CA 3.06 GB         Max_CA 3 GB 
+[2022-09-21 18:45:48,734] [INFO] [utils.py:597:see_memory_usage] CPU Virtual Memory:  used = 23.4 GB, percent = 1.3%
+[2022-09-21 18:45:48,796] [INFO] [utils.py:588:see_memory_usage] After creating fp32 master weights for param group 0
+[2022-09-21 18:45:48,797] [INFO] [utils.py:589:see_memory_usage] MA 4.36 GB         Max_MA 5.8 GB         CA 7.38 GB         Max_CA 7 GB 
+[2022-09-21 18:45:48,797] [INFO] [utils.py:597:see_memory_usage] CPU Virtual Memory:  used = 23.41 GB, percent = 1.3%
+[2022-09-21 18:45:48,848] [INFO] [utils.py:588:see_memory_usage] Before initializing optimizer states
+[2022-09-21 18:45:48,849] [INFO] [utils.py:589:see_memory_usage] MA 4.36 GB         Max_MA 4.36 GB         CA 7.38 GB         Max_CA 7 GB 
+[2022-09-21 18:45:48,849] [INFO] [utils.py:597:see_memory_usage] CPU Virtual Memory:  used = 23.41 GB, percent = 1.3%
+[2022-09-21 18:45:48,920] [INFO] [utils.py:588:see_memory_usage] After initializing optimizer states
+[2022-09-21 18:45:48,921] [INFO] [utils.py:589:see_memory_usage] MA 10.13 GB         Max_MA 13.01 GB         CA 16.04 GB         Max_CA 16 GB 
+[2022-09-21 18:45:48,921] [INFO] [utils.py:597:see_memory_usage] CPU Virtual Memory:  used = 23.41 GB, percent = 1.3%
+[2022-09-21 18:45:48,921] [INFO] [stage2.py:415:__init__] optimizer state initialized
+[2022-09-21 18:45:48,968] [INFO] [utils.py:588:see_memory_usage] After initializing ZeRO optimizer
+[2022-09-21 18:45:48,969] [INFO] [utils.py:589:see_memory_usage] MA 10.13 GB         Max_MA 10.13 GB         CA 16.04 GB         Max_CA 16 GB 
+[2022-09-21 18:45:48,969] [INFO] [utils.py:597:see_memory_usage] CPU Virtual Memory:  used = 23.41 GB, percent = 1.3%
+[2022-09-21 18:45:48,969] [INFO] [logging.py:60:log_dist] [Rank 0] DeepSpeed Final Optimizer = adam
+[2022-09-21 18:45:48,969] [INFO] [engine.py:524:_configure_lr_scheduler] DeepSpeed using client LR scheduler
+[2022-09-21 18:45:48,969] [INFO] [logging.py:60:log_dist] [Rank 0] DeepSpeed LR Scheduler = None
+[2022-09-21 18:45:48,969] [INFO] [logging.py:60:log_dist] [Rank 0] step=0, skipped=0, lr=[0.001], mom=[(0.9, 0.999)]
+[2022-09-21 18:45:48,969] [INFO] [config.py:882:print] DeepSpeedEngine configuration:
+[2022-09-21 18:45:48,970] [INFO] [config.py:886:print]   activation_checkpointing_config  {
+    "partition_activations": false, 
+    "contiguous_memory_optimization": false, 
+    "cpu_checkpointing": false, 
+    "number_checkpoints": null, 
+    "synchronize_checkpoint_boundary": false, 
+    "profile": false
+}
+[2022-09-21 18:45:48,970] [INFO] [config.py:886:print]   aio_config ................... {'block_size': 8388608, 'queue_depth': 8, 'thread_count': 1, 'single_submit': False, 'overlap_events': False}
+[2022-09-21 18:45:48,970] [INFO] [config.py:886:print]   allreduce_always_fp32 ........ False
+[2022-09-21 18:45:48,970] [INFO] [config.py:886:print]   amp_enabled .................. False
+[2022-09-21 18:45:48,970] [INFO] [config.py:886:print]   amp_params ................... False
+[2022-09-21 18:45:48,970] [INFO] [config.py:886:print]   checkpoint_config ............ {'tag_validation': 'WARN', 'checkpoint_serialization': False, 'writer': None}
+[2022-09-21 18:45:48,970] [INFO] [config.py:886:print]   disable_allgather ............ False
+[2022-09-21 18:45:48,970] [INFO] [config.py:886:print]   dump_state ................... False
+[2022-09-21 18:45:48,970] [INFO] [config.py:886:print]   dynamic_loss_scale_args ...... None
+[2022-09-21 18:45:48,970] [INFO] [config.py:886:print]   eigenvalue_enabled ........... False
+[2022-09-21 18:45:48,970] [INFO] [config.py:886:print]   eigenvalue_gas_boundary_resolution  1
+[2022-09-21 18:45:48,970] [INFO] [config.py:886:print]   eigenvalue_layer_name ........ bert.encoder.layer
+[2022-09-21 18:45:48,970] [INFO] [config.py:886:print]   eigenvalue_layer_num ......... 0
+[2022-09-21 18:45:48,970] [INFO] [config.py:886:print]   eigenvalue_max_iter .......... 100
+[2022-09-21 18:45:48,970] [INFO] [config.py:886:print]   eigenvalue_stability ......... 1e-06
+[2022-09-21 18:45:48,970] [INFO] [config.py:886:print]   eigenvalue_tol ............... 0.01
+[2022-09-21 18:45:48,970] [INFO] [config.py:886:print]   eigenvalue_verbose ........... False
+[2022-09-21 18:45:48,970] [INFO] [config.py:886:print]   elasticity_enabled ........... False
+[2022-09-21 18:45:48,970] [INFO] [config.py:886:print]   flops_profiler_config ........ {
+    "enabled": false, 
+    "profile_step": 1, 
+    "module_depth": -1, 
+    "top_modules": 1, 
+    "detailed": true, 
+    "output_file": null
+}
+[2022-09-21 18:45:48,970] [INFO] [config.py:886:print]   fp16_enabled ................. True
+[2022-09-21 18:45:48,970] [INFO] [config.py:886:print]   fp16_mixed_quantize .......... False
+[2022-09-21 18:45:48,970] [INFO] [config.py:886:print]   global_rank .................. 0
+[2022-09-21 18:45:48,970] [INFO] [config.py:886:print]   gradient_accumulation_steps .. 1
+[2022-09-21 18:45:48,970] [INFO] [config.py:886:print]   gradient_clipping ............ 0.0
+[2022-09-21 18:45:48,970] [INFO] [config.py:886:print]   gradient_predivide_factor .... 1.0
+[2022-09-21 18:45:48,970] [INFO] [config.py:886:print]   initial_dynamic_scale ........ 4294967296
+[2022-09-21 18:45:48,970] [INFO] [config.py:886:print]   loss_scale ................... 0
+[2022-09-21 18:45:48,971] [INFO] [config.py:886:print]   memory_breakdown ............. False
+[2022-09-21 18:45:48,971] [INFO] [config.py:886:print]   optimizer_legacy_fusion ...... False
+[2022-09-21 18:45:48,971] [INFO] [config.py:886:print]   optimizer_name ............... adam
+[2022-09-21 18:45:48,971] [INFO] [config.py:886:print]   optimizer_params ............. {}
+[2022-09-21 18:45:48,971] [INFO] [config.py:886:print]   pipeline ..................... {'stages': 'auto', 'partition': 'best', 'seed_layers': False, 'activation_checkpoint_interval': 0}
+[2022-09-21 18:45:48,971] [INFO] [config.py:886:print]   pld_enabled .................. False
+[2022-09-21 18:45:48,971] [INFO] [config.py:886:print]   pld_params ................... False
+[2022-09-21 18:45:48,971] [INFO] [config.py:886:print]   prescale_gradients ........... False
+[2022-09-21 18:45:48,971] [INFO] [config.py:886:print]   quantize_change_rate ......... 0.001
+[2022-09-21 18:45:48,971] [INFO] [config.py:886:print]   quantize_groups .............. 1
+[2022-09-21 18:45:48,971] [INFO] [config.py:886:print]   quantize_offset .............. 1000
+[2022-09-21 18:45:48,971] [INFO] [config.py:886:print]   quantize_period .............. 1000
+[2022-09-21 18:45:48,971] [INFO] [config.py:886:print]   quantize_rounding ............ 0
+[2022-09-21 18:45:48,971] [INFO] [config.py:886:print]   quantize_start_bits .......... 16
+[2022-09-21 18:45:48,971] [INFO] [config.py:886:print]   quantize_target_bits ......... 8
+[2022-09-21 18:45:48,971] [INFO] [config.py:886:print]   quantize_training_enabled .... False
+[2022-09-21 18:45:48,971] [INFO] [config.py:886:print]   quantize_type ................ 0
+[2022-09-21 18:45:48,971] [INFO] [config.py:886:print]   quantize_verbose ............. False
+[2022-09-21 18:45:48,971] [INFO] [config.py:886:print]   scheduler_name ............... None
+[2022-09-21 18:45:48,971] [INFO] [config.py:886:print]   scheduler_params ............. None
+[2022-09-21 18:45:48,971] [INFO] [config.py:886:print]   sparse_attention ............. None
+[2022-09-21 18:45:48,971] [INFO] [config.py:886:print]   sparse_gradients_enabled ..... False
+[2022-09-21 18:45:48,971] [INFO] [config.py:886:print]   steps_per_print .............. 10
+[2022-09-21 18:45:48,971] [INFO] [config.py:886:print]   tensorboard_enabled .......... False
+[2022-09-21 18:45:48,971] [INFO] [config.py:886:print]   tensorboard_job_name ......... DeepSpeedJobName
+[2022-09-21 18:45:48,971] [INFO] [config.py:886:print]   tensorboard_output_path ...... 
+[2022-09-21 18:45:48,971] [INFO] [config.py:886:print]   train_batch_size ............. 1
+[2022-09-21 18:45:48,971] [INFO] [config.py:886:print]   train_micro_batch_size_per_gpu  1
+[2022-09-21 18:45:48,971] [INFO] [config.py:886:print]   use_quantizer_kernel ......... False
+[2022-09-21 18:45:48,971] [INFO] [config.py:886:print]   wall_clock_breakdown ......... False
+[2022-09-21 18:45:48,971] [INFO] [config.py:886:print]   world_size ................... 1
+[2022-09-21 18:45:48,971] [INFO] [config.py:886:print]   zero_allow_untested_optimizer  False
+[2022-09-21 18:45:48,972] [INFO] [config.py:886:print]   zero_config .................. {
+    "stage": 2, 
+    "contiguous_gradients": false, 
+    "reduce_scatter": true, 
+    "reduce_bucket_size": 5.000000e+08, 
+    "allgather_partitions": true, 
+    "allgather_bucket_size": 5.000000e+08, 
+    "overlap_comm": false, 
+    "load_from_fp32_weights": true, 
+    "elastic_checkpoint": true, 
+    "offload_param": null, 
+    "offload_optimizer": null, 
+    "sub_group_size": 1.000000e+12, 
+    "prefetch_bucket_size": 5.000000e+07, 
+    "param_persistence_threshold": 1.000000e+05, 
+    "max_live_parameters": 1.000000e+09, 
+    "max_reuse_distance": 1.000000e+09, 
+    "gather_fp16_weights_on_model_save": false, 
+    "ignore_unused_parameters": true, 
+    "legacy_stage1": false
+}
+[2022-09-21 18:45:48,972] [INFO] [config.py:886:print]   zero_enabled ................. True
+[2022-09-21 18:45:48,972] [INFO] [config.py:886:print]   zero_optimization_stage ...... 2
+[2022-09-21 18:45:48,972] [INFO] [config.py:888:print]   json = {
+    "train_micro_batch_size_per_gpu": 1, 
+    "zero_optimization": {
+        "stage": 2, 
+        "cpu_offload": false
+    }, 
+    "fp16": {
+        "enabled": true
+    }, 
+    "optimizer": {
+        "type": "Adam", 
+        "params": {
+        }
+    }, 
+    "checkpoint": {
+        "checkpoint_serialization": false
+    }, 
+    "aio": {
+        "block_size": 8.388608e+06, 
+        "queue_depth": 8, 
+        "single_submit": false, 
+        "overlap_events": false, 
+        "thread_count": 1
+    }
+}
+Using /home/guanhuawang/.cache/torch_extensions/py38_cu113 as PyTorch extensions root...
+No modifications detected for re-loaded extension module utils, skipping build step...
+Loading extension module utils...
+Time to load utils op: 0.0004029273986816406 seconds
+[2022-09-21 18:45:49,143] [INFO] [logging.py:60:log_dist] [Rank 0] Saving model checkpoint: /home/guanhuawang/eclipse/gpt2-large/test_save/test_save/mp_rank_00_model_states.pt
+[2022-09-21 18:45:56,478] [INFO] [engine.py:1961:_copy_recovery_script] creating recovery script /home/guanhuawang/eclipse/gpt2-large/test_save/zero_to_fp32.py
+[2022-09-21 18:45:56,479] [INFO] [engine.py:1975:_save_zero_checkpoint] zero checkpoint saved /home/guanhuawang/eclipse/gpt2-large/test_save/test_save/zero_pp_rank_0_mp_rank_00_optim_states.pt
+test_save -- 10.13 GB,  7.51 secs,  1.35 gb/s
+*********************************************
+[2022-09-21 18:45:56,603] [INFO] [logging.py:60:log_dist] [Rank 0] DeepSpeed info: version=0.4.1+a4269a63, git-hash=a4269a63, git-branch=guanhua/staging-fast-ckpt-v2
+[2022-09-21 18:45:56,610] [INFO] [utils.py:11:_initialize_parameter_parallel_groups] data_parallel_size: 1, parameter_parallel_size: 1
+[2022-09-21 18:45:56,709] [INFO] [engine.py:176:__init__] DeepSpeed Flops Profiler Enabled: False
+Using /home/guanhuawang/.cache/torch_extensions/py38_cu113 as PyTorch extensions root...
+No modifications detected for re-loaded extension module fused_adam, skipping build step...
+Loading extension module fused_adam...
+Time to load fused_adam op: 0.0011363029479980469 seconds
+[2022-09-21 18:45:56,771] [INFO] [engine.py:706:_configure_optimizer] Using DeepSpeed Optimizer param name adam as basic optimizer
+[2022-09-21 18:45:56,771] [INFO] [engine.py:711:_configure_optimizer] DeepSpeed Basic Optimizer = FusedAdam
+Checking ZeRO support for optimizer=FusedAdam type=<class 'deepspeed.ops.adam.fused_adam.FusedAdam'>
+[2022-09-21 18:45:56,771] [INFO] [logging.py:60:log_dist] [Rank 0] Creating fp16 ZeRO stage 2 optimizer
+[2022-09-21 18:45:56,771] [INFO] [stage2.py:105:__init__] Reduce bucket size 500000000
+[2022-09-21 18:45:56,771] [INFO] [stage2.py:106:__init__] Allgather bucket size 500000000
+[2022-09-21 18:45:56,771] [INFO] [stage2.py:107:__init__] CPU Offload: False
+Using /home/guanhuawang/.cache/torch_extensions/py38_cu113 as PyTorch extensions root...
+No modifications detected for re-loaded extension module utils, skipping build step...
+Loading extension module utils...
+Time to load utils op: 0.00023317337036132812 seconds
+[2022-09-21 18:45:56,823] [INFO] [utils.py:588:see_memory_usage] Before moving param group 0 to CPU
+[2022-09-21 18:45:56,824] [INFO] [utils.py:589:see_memory_usage] MA 1.48 GB         Max_MA 10.13 GB         CA 1.48 GB         Max_CA 16 GB 
+[2022-09-21 18:45:56,824] [INFO] [utils.py:597:see_memory_usage] CPU Virtual Memory:  used = 22.55 GB, percent = 1.3%
+[2022-09-21 18:45:57,123] [INFO] [utils.py:588:see_memory_usage] After moving param group 0 to CPU
+[2022-09-21 18:45:57,124] [INFO] [utils.py:589:see_memory_usage] MA 0.04 GB         Max_MA 1.48 GB         CA 1.48 GB         Max_CA 1 GB 
+[2022-09-21 18:45:57,124] [INFO] [utils.py:597:see_memory_usage] CPU Virtual Memory:  used = 23.54 GB, percent = 1.3%
+[2022-09-21 18:45:57,614] [INFO] [utils.py:588:see_memory_usage] After flattening and moving param group 0 to GPU
+[2022-09-21 18:45:57,615] [INFO] [utils.py:589:see_memory_usage] MA 1.48 GB         Max_MA 1.48 GB         CA 1.48 GB         Max_CA 1 GB 
+[2022-09-21 18:45:57,616] [INFO] [utils.py:597:see_memory_usage] CPU Virtual Memory:  used = 23.51 GB, percent = 1.3%
+[2022-09-21 18:45:57,661] [INFO] [utils.py:588:see_memory_usage] After Flattening and after emptying param group 0 cache
+[2022-09-21 18:45:57,662] [INFO] [utils.py:589:see_memory_usage] MA 1.48 GB         Max_MA 1.48 GB         CA 1.48 GB         Max_CA 1 GB 
+[2022-09-21 18:45:57,662] [INFO] [utils.py:597:see_memory_usage] CPU Virtual Memory:  used = 23.52 GB, percent = 1.3%
+[2022-09-21 18:45:57,713] [INFO] [utils.py:588:see_memory_usage] Before creating fp32 master weights for param group 0
+[2022-09-21 18:45:57,714] [INFO] [utils.py:589:see_memory_usage] MA 1.48 GB         Max_MA 1.48 GB         CA 1.48 GB         Max_CA 1 GB 
+[2022-09-21 18:45:57,714] [INFO] [utils.py:597:see_memory_usage] CPU Virtual Memory:  used = 23.37 GB, percent = 1.3%
+[2022-09-21 18:45:57,775] [INFO] [utils.py:588:see_memory_usage] After creating fp32 master weights for param group 0
+[2022-09-21 18:45:57,775] [INFO] [utils.py:589:see_memory_usage] MA 4.36 GB         Max_MA 5.8 GB         CA 5.81 GB         Max_CA 6 GB 
+[2022-09-21 18:45:57,776] [INFO] [utils.py:597:see_memory_usage] CPU Virtual Memory:  used = 23.41 GB, percent = 1.3%
+[2022-09-21 18:45:57,827] [INFO] [utils.py:588:see_memory_usage] Before initializing optimizer states
+[2022-09-21 18:45:57,828] [INFO] [utils.py:589:see_memory_usage] MA 4.36 GB         Max_MA 4.36 GB         CA 5.81 GB         Max_CA 6 GB 
+[2022-09-21 18:45:57,828] [INFO] [utils.py:597:see_memory_usage] CPU Virtual Memory:  used = 23.37 GB, percent = 1.3%
+[2022-09-21 18:45:57,887] [INFO] [utils.py:588:see_memory_usage] After initializing optimizer states
+[2022-09-21 18:45:57,887] [INFO] [utils.py:589:see_memory_usage] MA 10.13 GB         Max_MA 13.01 GB         CA 14.46 GB         Max_CA 14 GB 
+[2022-09-21 18:45:57,888] [INFO] [utils.py:597:see_memory_usage] CPU Virtual Memory:  used = 23.38 GB, percent = 1.3%
+[2022-09-21 18:45:57,888] [INFO] [stage2.py:415:__init__] optimizer state initialized
+[2022-09-21 18:45:57,933] [INFO] [utils.py:588:see_memory_usage] After initializing ZeRO optimizer
+[2022-09-21 18:45:57,934] [INFO] [utils.py:589:see_memory_usage] MA 10.13 GB         Max_MA 10.13 GB         CA 14.46 GB         Max_CA 14 GB 
+[2022-09-21 18:45:57,934] [INFO] [utils.py:597:see_memory_usage] CPU Virtual Memory:  used = 23.37 GB, percent = 1.3%
+[2022-09-21 18:45:57,934] [INFO] [logging.py:60:log_dist] [Rank 0] DeepSpeed Final Optimizer = adam
+[2022-09-21 18:45:57,935] [INFO] [engine.py:524:_configure_lr_scheduler] DeepSpeed using client LR scheduler
+[2022-09-21 18:45:57,935] [INFO] [logging.py:60:log_dist] [Rank 0] DeepSpeed LR Scheduler = None
+[2022-09-21 18:45:57,935] [INFO] [logging.py:60:log_dist] [Rank 0] step=0, skipped=0, lr=[0.001], mom=[(0.9, 0.999)]
+[2022-09-21 18:45:57,935] [INFO] [config.py:882:print] DeepSpeedEngine configuration:
+[2022-09-21 18:45:57,935] [INFO] [config.py:886:print]   activation_checkpointing_config  {
+    "partition_activations": false, 
+    "contiguous_memory_optimization": false, 
+    "cpu_checkpointing": false, 
+    "number_checkpoints": null, 
+    "synchronize_checkpoint_boundary": false, 
+    "profile": false
+}
+[2022-09-21 18:45:57,935] [INFO] [config.py:886:print]   aio_config ................... {'block_size': 8388608, 'queue_depth': 8, 'thread_count': 1, 'single_submit': False, 'overlap_events': False}
+[2022-09-21 18:45:57,935] [INFO] [config.py:886:print]   allreduce_always_fp32 ........ False
+[2022-09-21 18:45:57,935] [INFO] [config.py:886:print]   amp_enabled .................. False
+[2022-09-21 18:45:57,935] [INFO] [config.py:886:print]   amp_params ................... False
+[2022-09-21 18:45:57,935] [INFO] [config.py:886:print]   checkpoint_config ............ {'tag_validation': 'WARN', 'checkpoint_serialization': False, 'writer': {'type': 'MOCK', 'io_buffer_size': 1073741824, 'io_buffer_double': False, 'show_statistics': True}}
+[2022-09-21 18:45:57,935] [INFO] [config.py:886:print]   disable_allgather ............ False
+[2022-09-21 18:45:57,935] [INFO] [config.py:886:print]   dump_state ................... False
+[2022-09-21 18:45:57,935] [INFO] [config.py:886:print]   dynamic_loss_scale_args ...... None
+[2022-09-21 18:45:57,935] [INFO] [config.py:886:print]   eigenvalue_enabled ........... False
+[2022-09-21 18:45:57,935] [INFO] [config.py:886:print]   eigenvalue_gas_boundary_resolution  1
+[2022-09-21 18:45:57,935] [INFO] [config.py:886:print]   eigenvalue_layer_name ........ bert.encoder.layer
+[2022-09-21 18:45:57,935] [INFO] [config.py:886:print]   eigenvalue_layer_num ......... 0
+[2022-09-21 18:45:57,935] [INFO] [config.py:886:print]   eigenvalue_max_iter .......... 100
+[2022-09-21 18:45:57,935] [INFO] [config.py:886:print]   eigenvalue_stability ......... 1e-06
+[2022-09-21 18:45:57,935] [INFO] [config.py:886:print]   eigenvalue_tol ............... 0.01
+[2022-09-21 18:45:57,935] [INFO] [config.py:886:print]   eigenvalue_verbose ........... False
+[2022-09-21 18:45:57,935] [INFO] [config.py:886:print]   elasticity_enabled ........... False
+[2022-09-21 18:45:57,936] [INFO] [config.py:886:print]   flops_profiler_config ........ {
+    "enabled": false, 
+    "profile_step": 1, 
+    "module_depth": -1, 
+    "top_modules": 1, 
+    "detailed": true, 
+    "output_file": null
+}
+[2022-09-21 18:45:57,936] [INFO] [config.py:886:print]   fp16_enabled ................. True
+[2022-09-21 18:45:57,936] [INFO] [config.py:886:print]   fp16_mixed_quantize .......... False
+[2022-09-21 18:45:57,936] [INFO] [config.py:886:print]   global_rank .................. 0
+[2022-09-21 18:45:57,936] [INFO] [config.py:886:print]   gradient_accumulation_steps .. 1
+[2022-09-21 18:45:57,936] [INFO] [config.py:886:print]   gradient_clipping ............ 0.0
+[2022-09-21 18:45:57,936] [INFO] [config.py:886:print]   gradient_predivide_factor .... 1.0
+[2022-09-21 18:45:57,936] [INFO] [config.py:886:print]   initial_dynamic_scale ........ 4294967296
+[2022-09-21 18:45:57,936] [INFO] [config.py:886:print]   loss_scale ................... 0
+[2022-09-21 18:45:57,936] [INFO] [config.py:886:print]   memory_breakdown ............. False
+[2022-09-21 18:45:57,936] [INFO] [config.py:886:print]   optimizer_legacy_fusion ...... False
+[2022-09-21 18:45:57,936] [INFO] [config.py:886:print]   optimizer_name ............... adam
+[2022-09-21 18:45:57,936] [INFO] [config.py:886:print]   optimizer_params ............. {}
+[2022-09-21 18:45:57,936] [INFO] [config.py:886:print]   pipeline ..................... {'stages': 'auto', 'partition': 'best', 'seed_layers': False, 'activation_checkpoint_interval': 0}
+[2022-09-21 18:45:57,936] [INFO] [config.py:886:print]   pld_enabled .................. False
+[2022-09-21 18:45:57,936] [INFO] [config.py:886:print]   pld_params ................... False
+[2022-09-21 18:45:57,936] [INFO] [config.py:886:print]   prescale_gradients ........... False
+[2022-09-21 18:45:57,936] [INFO] [config.py:886:print]   quantize_change_rate ......... 0.001
+[2022-09-21 18:45:57,936] [INFO] [config.py:886:print]   quantize_groups .............. 1
+[2022-09-21 18:45:57,936] [INFO] [config.py:886:print]   quantize_offset .............. 1000
+[2022-09-21 18:45:57,936] [INFO] [config.py:886:print]   quantize_period .............. 1000
+[2022-09-21 18:45:57,936] [INFO] [config.py:886:print]   quantize_rounding ............ 0
+[2022-09-21 18:45:57,936] [INFO] [config.py:886:print]   quantize_start_bits .......... 16
+[2022-09-21 18:45:57,936] [INFO] [config.py:886:print]   quantize_target_bits ......... 8
+[2022-09-21 18:45:57,936] [INFO] [config.py:886:print]   quantize_training_enabled .... False
+[2022-09-21 18:45:57,936] [INFO] [config.py:886:print]   quantize_type ................ 0
+[2022-09-21 18:45:57,936] [INFO] [config.py:886:print]   quantize_verbose ............. False
+[2022-09-21 18:45:57,936] [INFO] [config.py:886:print]   scheduler_name ............... None
+[2022-09-21 18:45:57,936] [INFO] [config.py:886:print]   scheduler_params ............. None
+[2022-09-21 18:45:57,936] [INFO] [config.py:886:print]   sparse_attention ............. None
+[2022-09-21 18:45:57,936] [INFO] [config.py:886:print]   sparse_gradients_enabled ..... False
+[2022-09-21 18:45:57,936] [INFO] [config.py:886:print]   steps_per_print .............. 10
+[2022-09-21 18:45:57,936] [INFO] [config.py:886:print]   tensorboard_enabled .......... False
+[2022-09-21 18:45:57,936] [INFO] [config.py:886:print]   tensorboard_job_name ......... DeepSpeedJobName
+[2022-09-21 18:45:57,937] [INFO] [config.py:886:print]   tensorboard_output_path ...... 
+[2022-09-21 18:45:57,937] [INFO] [config.py:886:print]   train_batch_size ............. 1
+[2022-09-21 18:45:57,937] [INFO] [config.py:886:print]   train_micro_batch_size_per_gpu  1
+[2022-09-21 18:45:57,937] [INFO] [config.py:886:print]   use_quantizer_kernel ......... False
+[2022-09-21 18:45:57,937] [INFO] [config.py:886:print]   wall_clock_breakdown ......... False
+[2022-09-21 18:45:57,937] [INFO] [config.py:886:print]   world_size ................... 1
+[2022-09-21 18:45:57,937] [INFO] [config.py:886:print]   zero_allow_untested_optimizer  False
+[2022-09-21 18:45:57,937] [INFO] [config.py:886:print]   zero_config .................. {
+    "stage": 2, 
+    "contiguous_gradients": false, 
+    "reduce_scatter": true, 
+    "reduce_bucket_size": 5.000000e+08, 
+    "allgather_partitions": true, 
+    "allgather_bucket_size": 5.000000e+08, 
+    "overlap_comm": false, 
+    "load_from_fp32_weights": true, 
+    "elastic_checkpoint": true, 
+    "offload_param": null, 
+    "offload_optimizer": null, 
+    "sub_group_size": 1.000000e+12, 
+    "prefetch_bucket_size": 5.000000e+07, 
+    "param_persistence_threshold": 1.000000e+05, 
+    "max_live_parameters": 1.000000e+09, 
+    "max_reuse_distance": 1.000000e+09, 
+    "gather_fp16_weights_on_model_save": false, 
+    "ignore_unused_parameters": true, 
+    "legacy_stage1": false
+}
+[2022-09-21 18:45:57,937] [INFO] [config.py:886:print]   zero_enabled ................. True
+[2022-09-21 18:45:57,937] [INFO] [config.py:886:print]   zero_optimization_stage ...... 2
+[2022-09-21 18:45:57,937] [INFO] [config.py:888:print]   json = {
+    "train_micro_batch_size_per_gpu": 1, 
+    "zero_optimization": {
+        "stage": 2, 
+        "cpu_offload": false
+    }, 
+    "fp16": {
+        "enabled": true
+    }, 
+    "optimizer": {
+        "type": "Adam", 
+        "params": {
+        }
+    }, 
+    "checkpoint": {
+        "checkpoint_serialization": false, 
+        "writer": {
+            "type": "mock", 
+            "io_buffer_size": 1.073742e+09, 
+            "io_buffer_double": false, 
+            "show_statistics": true
+        }
+    }, 
+    "aio": {
+        "block_size": 8.388608e+06, 
+        "queue_depth": 8, 
+        "single_submit": false, 
+        "overlap_events": false, 
+        "thread_count": 1
+    }
+}
+Using /home/guanhuawang/.cache/torch_extensions/py38_cu113 as PyTorch extensions root...
+No modifications detected for re-loaded extension module utils, skipping build step...
+Loading extension module utils...
+Time to load utils op: 0.000377655029296875 seconds
+[2022-09-21 18:45:57,942] [INFO] [logging.py:60:log_dist] [Rank 0] Saving model checkpoint: /home/guanhuawang/eclipse/gpt2-large/test_ds_mock_save/test_ds_mock_save/mp_rank_00_model_states.pt
+stats = {'close': 1, 'fileno': 73, 'flush': 2, 'write': 152, 'bytes': 1585909545, 'write_secs': 0, 'save_storage': 0, 'save_storage_bytes': 0}
+stats = {'close': 1, 'fileno': 3, 'flush': 2, 'write': 17, 'bytes': 9288390321, 'write_secs': 0, 'save_storage': 0, 'save_storage_bytes': 0}
+[2022-09-21 18:45:59,953] [INFO] [engine.py:1961:_copy_recovery_script] creating recovery script /home/guanhuawang/eclipse/gpt2-large/test_ds_mock_save/zero_to_fp32.py
+[2022-09-21 18:45:59,953] [INFO] [engine.py:1975:_save_zero_checkpoint] zero checkpoint saved /home/guanhuawang/eclipse/gpt2-large/test_ds_mock_save/test_ds_mock_save/zero_pp_rank_0_mp_rank_00_optim_states.pt
+test_ds_mock_save --  0.00 GB,  2.02 secs,  0.00 gb/s
+*********************************************
+[2022-09-21 18:46:00,921] [INFO] [logging.py:60:log_dist] [Rank 0] DeepSpeed info: version=0.4.1+a4269a63, git-hash=a4269a63, git-branch=guanhua/staging-fast-ckpt-v2
+[2022-09-21 18:46:00,928] [INFO] [utils.py:11:_initialize_parameter_parallel_groups] data_parallel_size: 1, parameter_parallel_size: 1
+[2022-09-21 18:46:01,026] [INFO] [engine.py:176:__init__] DeepSpeed Flops Profiler Enabled: False
+Using /home/guanhuawang/.cache/torch_extensions/py38_cu113 as PyTorch extensions root...
+No modifications detected for re-loaded extension module fused_adam, skipping build step...
+Loading extension module fused_adam...
+Time to load fused_adam op: 0.001192331314086914 seconds
+[2022-09-21 18:46:01,079] [INFO] [engine.py:706:_configure_optimizer] Using DeepSpeed Optimizer param name adam as basic optimizer
+[2022-09-21 18:46:01,079] [INFO] [engine.py:711:_configure_optimizer] DeepSpeed Basic Optimizer = FusedAdam
+Checking ZeRO support for optimizer=FusedAdam type=<class 'deepspeed.ops.adam.fused_adam.FusedAdam'>
+[2022-09-21 18:46:01,079] [INFO] [logging.py:60:log_dist] [Rank 0] Creating fp16 ZeRO stage 2 optimizer
+[2022-09-21 18:46:01,079] [INFO] [stage2.py:105:__init__] Reduce bucket size 500000000
+[2022-09-21 18:46:01,080] [INFO] [stage2.py:106:__init__] Allgather bucket size 500000000
+[2022-09-21 18:46:01,080] [INFO] [stage2.py:107:__init__] CPU Offload: False
+Using /home/guanhuawang/.cache/torch_extensions/py38_cu113 as PyTorch extensions root...
+No modifications detected for re-loaded extension module utils, skipping build step...
+Loading extension module utils...
+Time to load utils op: 0.0002560615539550781 seconds
+[2022-09-21 18:46:01,130] [INFO] [utils.py:588:see_memory_usage] Before moving param group 0 to CPU
+[2022-09-21 18:46:01,131] [INFO] [utils.py:589:see_memory_usage] MA 1.48 GB         Max_MA 10.13 GB         CA 1.48 GB         Max_CA 14 GB 
+[2022-09-21 18:46:01,132] [INFO] [utils.py:597:see_memory_usage] CPU Virtual Memory:  used = 22.63 GB, percent = 1.3%
+[2022-09-21 18:46:01,426] [INFO] [utils.py:588:see_memory_usage] After moving param group 0 to CPU
+[2022-09-21 18:46:01,427] [INFO] [utils.py:589:see_memory_usage] MA 0.04 GB         Max_MA 1.48 GB         CA 1.48 GB         Max_CA 1 GB 
+[2022-09-21 18:46:01,427] [INFO] [utils.py:597:see_memory_usage] CPU Virtual Memory:  used = 23.56 GB, percent = 1.3%
+[2022-09-21 18:46:01,861] [INFO] [utils.py:588:see_memory_usage] After flattening and moving param group 0 to GPU
+[2022-09-21 18:46:01,862] [INFO] [utils.py:589:see_memory_usage] MA 1.48 GB         Max_MA 1.48 GB         CA 1.48 GB         Max_CA 1 GB 
+[2022-09-21 18:46:01,863] [INFO] [utils.py:597:see_memory_usage] CPU Virtual Memory:  used = 23.56 GB, percent = 1.3%
+[2022-09-21 18:46:01,907] [INFO] [utils.py:588:see_memory_usage] After Flattening and after emptying param group 0 cache
+[2022-09-21 18:46:01,908] [INFO] [utils.py:589:see_memory_usage] MA 1.48 GB         Max_MA 1.48 GB         CA 1.48 GB         Max_CA 1 GB 
+[2022-09-21 18:46:01,908] [INFO] [utils.py:597:see_memory_usage] CPU Virtual Memory:  used = 23.56 GB, percent = 1.3%
+[2022-09-21 18:46:01,959] [INFO] [utils.py:588:see_memory_usage] Before creating fp32 master weights for param group 0
+[2022-09-21 18:46:01,960] [INFO] [utils.py:589:see_memory_usage] MA 1.48 GB         Max_MA 1.48 GB         CA 1.48 GB         Max_CA 1 GB 
+[2022-09-21 18:46:01,960] [INFO] [utils.py:597:see_memory_usage] CPU Virtual Memory:  used = 23.44 GB, percent = 1.3%
+[2022-09-21 18:46:02,013] [INFO] [utils.py:588:see_memory_usage] After creating fp32 master weights for param group 0
+[2022-09-21 18:46:02,013] [INFO] [utils.py:589:see_memory_usage] MA 4.36 GB         Max_MA 5.8 GB         CA 5.81 GB         Max_CA 6 GB 
+[2022-09-21 18:46:02,014] [INFO] [utils.py:597:see_memory_usage] CPU Virtual Memory:  used = 23.44 GB, percent = 1.3%
+[2022-09-21 18:46:02,065] [INFO] [utils.py:588:see_memory_usage] Before initializing optimizer states
+[2022-09-21 18:46:02,066] [INFO] [utils.py:589:see_memory_usage] MA 4.36 GB         Max_MA 4.36 GB         CA 5.81 GB         Max_CA 6 GB 
+[2022-09-21 18:46:02,066] [INFO] [utils.py:597:see_memory_usage] CPU Virtual Memory:  used = 23.44 GB, percent = 1.3%
+[2022-09-21 18:46:02,125] [INFO] [utils.py:588:see_memory_usage] After initializing optimizer states
+[2022-09-21 18:46:02,126] [INFO] [utils.py:589:see_memory_usage] MA 10.13 GB         Max_MA 13.01 GB         CA 14.46 GB         Max_CA 14 GB 
+[2022-09-21 18:46:02,126] [INFO] [utils.py:597:see_memory_usage] CPU Virtual Memory:  used = 23.44 GB, percent = 1.3%
+[2022-09-21 18:46:02,126] [INFO] [stage2.py:415:__init__] optimizer state initialized
+[2022-09-21 18:46:02,172] [INFO] [utils.py:588:see_memory_usage] After initializing ZeRO optimizer
+[2022-09-21 18:46:02,173] [INFO] [utils.py:589:see_memory_usage] MA 10.13 GB         Max_MA 10.13 GB         CA 14.46 GB         Max_CA 14 GB 
+[2022-09-21 18:46:02,173] [INFO] [utils.py:597:see_memory_usage] CPU Virtual Memory:  used = 23.44 GB, percent = 1.3%
+[2022-09-21 18:46:02,174] [INFO] [logging.py:60:log_dist] [Rank 0] DeepSpeed Final Optimizer = adam
+[2022-09-21 18:46:02,174] [INFO] [engine.py:524:_configure_lr_scheduler] DeepSpeed using client LR scheduler
+[2022-09-21 18:46:02,174] [INFO] [logging.py:60:log_dist] [Rank 0] DeepSpeed LR Scheduler = None
+[2022-09-21 18:46:02,174] [INFO] [logging.py:60:log_dist] [Rank 0] step=0, skipped=0, lr=[0.001], mom=[(0.9, 0.999)]
+[2022-09-21 18:46:02,174] [INFO] [config.py:882:print] DeepSpeedEngine configuration:
+[2022-09-21 18:46:02,174] [INFO] [config.py:886:print]   activation_checkpointing_config  {
+    "partition_activations": false, 
+    "contiguous_memory_optimization": false, 
+    "cpu_checkpointing": false, 
+    "number_checkpoints": null, 
+    "synchronize_checkpoint_boundary": false, 
+    "profile": false
+}
+[2022-09-21 18:46:02,174] [INFO] [config.py:886:print]   aio_config ................... {'block_size': 8388608, 'queue_depth': 8, 'thread_count': 1, 'single_submit': False, 'overlap_events': False}
+[2022-09-21 18:46:02,174] [INFO] [config.py:886:print]   allreduce_always_fp32 ........ False
+[2022-09-21 18:46:02,174] [INFO] [config.py:886:print]   amp_enabled .................. False
+[2022-09-21 18:46:02,174] [INFO] [config.py:886:print]   amp_params ................... False
+[2022-09-21 18:46:02,174] [INFO] [config.py:886:print]   checkpoint_config ............ {'tag_validation': 'WARN', 'checkpoint_serialization': False, 'writer': {'type': 'PYTHON', 'io_buffer_size': 1073741824, 'io_buffer_double': False, 'show_statistics': True}}
+[2022-09-21 18:46:02,174] [INFO] [config.py:886:print]   disable_allgather ............ False
+[2022-09-21 18:46:02,174] [INFO] [config.py:886:print]   dump_state ................... False
+[2022-09-21 18:46:02,174] [INFO] [config.py:886:print]   dynamic_loss_scale_args ...... None
+[2022-09-21 18:46:02,174] [INFO] [config.py:886:print]   eigenvalue_enabled ........... False
+[2022-09-21 18:46:02,174] [INFO] [config.py:886:print]   eigenvalue_gas_boundary_resolution  1
+[2022-09-21 18:46:02,174] [INFO] [config.py:886:print]   eigenvalue_layer_name ........ bert.encoder.layer
+[2022-09-21 18:46:02,174] [INFO] [config.py:886:print]   eigenvalue_layer_num ......... 0
+[2022-09-21 18:46:02,174] [INFO] [config.py:886:print]   eigenvalue_max_iter .......... 100
+[2022-09-21 18:46:02,174] [INFO] [config.py:886:print]   eigenvalue_stability ......... 1e-06
+[2022-09-21 18:46:02,174] [INFO] [config.py:886:print]   eigenvalue_tol ............... 0.01
+[2022-09-21 18:46:02,174] [INFO] [config.py:886:print]   eigenvalue_verbose ........... False
+[2022-09-21 18:46:02,175] [INFO] [config.py:886:print]   elasticity_enabled ........... False
+[2022-09-21 18:46:02,175] [INFO] [config.py:886:print]   flops_profiler_config ........ {
+    "enabled": false, 
+    "profile_step": 1, 
+    "module_depth": -1, 
+    "top_modules": 1, 
+    "detailed": true, 
+    "output_file": null
+}
+[2022-09-21 18:46:02,175] [INFO] [config.py:886:print]   fp16_enabled ................. True
+[2022-09-21 18:46:02,175] [INFO] [config.py:886:print]   fp16_mixed_quantize .......... False
+[2022-09-21 18:46:02,175] [INFO] [config.py:886:print]   global_rank .................. 0
+[2022-09-21 18:46:02,175] [INFO] [config.py:886:print]   gradient_accumulation_steps .. 1
+[2022-09-21 18:46:02,175] [INFO] [config.py:886:print]   gradient_clipping ............ 0.0
+[2022-09-21 18:46:02,175] [INFO] [config.py:886:print]   gradient_predivide_factor .... 1.0
+[2022-09-21 18:46:02,175] [INFO] [config.py:886:print]   initial_dynamic_scale ........ 4294967296
+[2022-09-21 18:46:02,175] [INFO] [config.py:886:print]   loss_scale ................... 0
+[2022-09-21 18:46:02,175] [INFO] [config.py:886:print]   memory_breakdown ............. False
+[2022-09-21 18:46:02,175] [INFO] [config.py:886:print]   optimizer_legacy_fusion ...... False
+[2022-09-21 18:46:02,175] [INFO] [config.py:886:print]   optimizer_name ............... adam
+[2022-09-21 18:46:02,175] [INFO] [config.py:886:print]   optimizer_params ............. {}
+[2022-09-21 18:46:02,175] [INFO] [config.py:886:print]   pipeline ..................... {'stages': 'auto', 'partition': 'best', 'seed_layers': False, 'activation_checkpoint_interval': 0}
+[2022-09-21 18:46:02,175] [INFO] [config.py:886:print]   pld_enabled .................. False
+[2022-09-21 18:46:02,175] [INFO] [config.py:886:print]   pld_params ................... False
+[2022-09-21 18:46:02,175] [INFO] [config.py:886:print]   prescale_gradients ........... False
+[2022-09-21 18:46:02,175] [INFO] [config.py:886:print]   quantize_change_rate ......... 0.001
+[2022-09-21 18:46:02,175] [INFO] [config.py:886:print]   quantize_groups .............. 1
+[2022-09-21 18:46:02,175] [INFO] [config.py:886:print]   quantize_offset .............. 1000
+[2022-09-21 18:46:02,175] [INFO] [config.py:886:print]   quantize_period .............. 1000
+[2022-09-21 18:46:02,175] [INFO] [config.py:886:print]   quantize_rounding ............ 0
+[2022-09-21 18:46:02,175] [INFO] [config.py:886:print]   quantize_start_bits .......... 16
+[2022-09-21 18:46:02,175] [INFO] [config.py:886:print]   quantize_target_bits ......... 8
+[2022-09-21 18:46:02,175] [INFO] [config.py:886:print]   quantize_training_enabled .... False
+[2022-09-21 18:46:02,175] [INFO] [config.py:886:print]   quantize_type ................ 0
+[2022-09-21 18:46:02,175] [INFO] [config.py:886:print]   quantize_verbose ............. False
+[2022-09-21 18:46:02,175] [INFO] [config.py:886:print]   scheduler_name ............... None
+[2022-09-21 18:46:02,175] [INFO] [config.py:886:print]   scheduler_params ............. None
+[2022-09-21 18:46:02,175] [INFO] [config.py:886:print]   sparse_attention ............. None
+[2022-09-21 18:46:02,175] [INFO] [config.py:886:print]   sparse_gradients_enabled ..... False
+[2022-09-21 18:46:02,176] [INFO] [config.py:886:print]   steps_per_print .............. 10
+[2022-09-21 18:46:02,176] [INFO] [config.py:886:print]   tensorboard_enabled .......... False
+[2022-09-21 18:46:02,176] [INFO] [config.py:886:print]   tensorboard_job_name ......... DeepSpeedJobName
+[2022-09-21 18:46:02,176] [INFO] [config.py:886:print]   tensorboard_output_path ...... 
+[2022-09-21 18:46:02,176] [INFO] [config.py:886:print]   train_batch_size ............. 1
+[2022-09-21 18:46:02,176] [INFO] [config.py:886:print]   train_micro_batch_size_per_gpu  1
+[2022-09-21 18:46:02,176] [INFO] [config.py:886:print]   use_quantizer_kernel ......... False
+[2022-09-21 18:46:02,176] [INFO] [config.py:886:print]   wall_clock_breakdown ......... False
+[2022-09-21 18:46:02,176] [INFO] [config.py:886:print]   world_size ................... 1
+[2022-09-21 18:46:02,176] [INFO] [config.py:886:print]   zero_allow_untested_optimizer  False
+[2022-09-21 18:46:02,176] [INFO] [config.py:886:print]   zero_config .................. {
+    "stage": 2, 
+    "contiguous_gradients": false, 
+    "reduce_scatter": true, 
+    "reduce_bucket_size": 5.000000e+08, 
+    "allgather_partitions": true, 
+    "allgather_bucket_size": 5.000000e+08, 
+    "overlap_comm": false, 
+    "load_from_fp32_weights": true, 
+    "elastic_checkpoint": true, 
+    "offload_param": null, 
+    "offload_optimizer": null, 
+    "sub_group_size": 1.000000e+12, 
+    "prefetch_bucket_size": 5.000000e+07, 
+    "param_persistence_threshold": 1.000000e+05, 
+    "max_live_parameters": 1.000000e+09, 
+    "max_reuse_distance": 1.000000e+09, 
+    "gather_fp16_weights_on_model_save": false, 
+    "ignore_unused_parameters": true, 
+    "legacy_stage1": false
+}
+[2022-09-21 18:46:02,176] [INFO] [config.py:886:print]   zero_enabled ................. True
+[2022-09-21 18:46:02,176] [INFO] [config.py:886:print]   zero_optimization_stage ...... 2
+[2022-09-21 18:46:02,176] [INFO] [config.py:888:print]   json = {
+    "train_micro_batch_size_per_gpu": 1, 
+    "zero_optimization": {
+        "stage": 2, 
+        "cpu_offload": false
+    }, 
+    "fp16": {
+        "enabled": true
+    }, 
+    "optimizer": {
+        "type": "Adam", 
+        "params": {
+        }
+    }, 
+    "checkpoint": {
+        "checkpoint_serialization": false, 
+        "writer": {
+            "type": "python", 
+            "io_buffer_size": 1.073742e+09, 
+            "io_buffer_double": false, 
+            "show_statistics": true
+        }
+    }, 
+    "aio": {
+        "block_size": 8.388608e+06, 
+        "queue_depth": 8, 
+        "single_submit": false, 
+        "overlap_events": false, 
+        "thread_count": 1
+    }
+}
+Using /home/guanhuawang/.cache/torch_extensions/py38_cu113 as PyTorch extensions root...
+No modifications detected for re-loaded extension module utils, skipping build step...
+Loading extension module utils...
+Time to load utils op: 0.0003757476806640625 seconds
+[2022-09-21 18:46:02,181] [INFO] [logging.py:60:log_dist] [Rank 0] Saving model checkpoint: /home/guanhuawang/eclipse/gpt2-large/test_ds_py_save/test_ds_py_save/mp_rank_00_model_states.pt
+stats = {'close': 1, 'fileno': 73, 'flush': 2, 'write': 152, 'bytes': 1585909547, 'write_secs': 0.7758586406707764}
+stats = {'close': 1, 'fileno': 3, 'flush': 2, 'write': 17, 'bytes': 9288390323, 'write_secs': 4.455736398696899}
+[2022-09-21 18:46:09,408] [INFO] [engine.py:1961:_copy_recovery_script] creating recovery script /home/guanhuawang/eclipse/gpt2-large/test_ds_py_save/zero_to_fp32.py
+[2022-09-21 18:46:09,409] [INFO] [engine.py:1975:_save_zero_checkpoint] zero checkpoint saved /home/guanhuawang/eclipse/gpt2-large/test_ds_py_save/test_ds_py_save/zero_pp_rank_0_mp_rank_00_optim_states.pt
+test_ds_py_save -- 10.13 GB,  7.23 secs,  1.40 gb/s
+*********************************************
+[2022-09-21 18:46:09,498] [INFO] [logging.py:60:log_dist] [Rank 0] DeepSpeed info: version=0.4.1+a4269a63, git-hash=a4269a63, git-branch=guanhua/staging-fast-ckpt-v2
+[2022-09-21 18:46:09,504] [INFO] [utils.py:11:_initialize_parameter_parallel_groups] data_parallel_size: 1, parameter_parallel_size: 1
+[2022-09-21 18:46:09,602] [INFO] [engine.py:176:__init__] DeepSpeed Flops Profiler Enabled: False
+Using /home/guanhuawang/.cache/torch_extensions/py38_cu113 as PyTorch extensions root...
+No modifications detected for re-loaded extension module fused_adam, skipping build step...
+Loading extension module fused_adam...
+Time to load fused_adam op: 0.0010247230529785156 seconds
+[2022-09-21 18:46:09,666] [INFO] [engine.py:706:_configure_optimizer] Using DeepSpeed Optimizer param name adam as basic optimizer
+[2022-09-21 18:46:09,666] [INFO] [engine.py:711:_configure_optimizer] DeepSpeed Basic Optimizer = FusedAdam
+Checking ZeRO support for optimizer=FusedAdam type=<class 'deepspeed.ops.adam.fused_adam.FusedAdam'>
+[2022-09-21 18:46:09,666] [INFO] [logging.py:60:log_dist] [Rank 0] Creating fp16 ZeRO stage 2 optimizer
+[2022-09-21 18:46:09,666] [INFO] [stage2.py:105:__init__] Reduce bucket size 500000000
+[2022-09-21 18:46:09,666] [INFO] [stage2.py:106:__init__] Allgather bucket size 500000000
+[2022-09-21 18:46:09,666] [INFO] [stage2.py:107:__init__] CPU Offload: False
+Using /home/guanhuawang/.cache/torch_extensions/py38_cu113 as PyTorch extensions root...
+No modifications detected for re-loaded extension module utils, skipping build step...
+Loading extension module utils...
+Time to load utils op: 0.0002410411834716797 seconds
+[2022-09-21 18:46:09,746] [INFO] [utils.py:588:see_memory_usage] Before moving param group 0 to CPU
+[2022-09-21 18:46:09,747] [INFO] [utils.py:589:see_memory_usage] MA 1.48 GB         Max_MA 10.13 GB         CA 1.48 GB         Max_CA 14 GB 
+[2022-09-21 18:46:09,747] [INFO] [utils.py:597:see_memory_usage] CPU Virtual Memory:  used = 22.6 GB, percent = 1.3%
+[2022-09-21 18:46:10,065] [INFO] [utils.py:588:see_memory_usage] After moving param group 0 to CPU
+[2022-09-21 18:46:10,066] [INFO] [utils.py:589:see_memory_usage] MA 0.04 GB         Max_MA 1.48 GB         CA 1.48 GB         Max_CA 1 GB 
+[2022-09-21 18:46:10,066] [INFO] [utils.py:597:see_memory_usage] CPU Virtual Memory:  used = 23.59 GB, percent = 1.3%
+[2022-09-21 18:46:11,872] [INFO] [utils.py:588:see_memory_usage] After flattening and moving param group 0 to GPU
+[2022-09-21 18:46:11,873] [INFO] [utils.py:589:see_memory_usage] MA 1.48 GB         Max_MA 1.48 GB         CA 1.48 GB         Max_CA 1 GB 
+[2022-09-21 18:46:11,873] [INFO] [utils.py:597:see_memory_usage] CPU Virtual Memory:  used = 23.58 GB, percent = 1.3%
+[2022-09-21 18:46:11,918] [INFO] [utils.py:588:see_memory_usage] After Flattening and after emptying param group 0 cache
+[2022-09-21 18:46:11,919] [INFO] [utils.py:589:see_memory_usage] MA 1.48 GB         Max_MA 1.48 GB         CA 1.48 GB         Max_CA 1 GB 
+[2022-09-21 18:46:11,919] [INFO] [utils.py:597:see_memory_usage] CPU Virtual Memory:  used = 23.58 GB, percent = 1.3%
+[2022-09-21 18:46:11,969] [INFO] [utils.py:588:see_memory_usage] Before creating fp32 master weights for param group 0
+[2022-09-21 18:46:11,970] [INFO] [utils.py:589:see_memory_usage] MA 1.48 GB         Max_MA 1.48 GB         CA 1.48 GB         Max_CA 1 GB 
+[2022-09-21 18:46:11,971] [INFO] [utils.py:597:see_memory_usage] CPU Virtual Memory:  used = 23.46 GB, percent = 1.3%
+[2022-09-21 18:46:12,030] [INFO] [utils.py:588:see_memory_usage] After creating fp32 master weights for param group 0
+[2022-09-21 18:46:12,030] [INFO] [utils.py:589:see_memory_usage] MA 4.36 GB         Max_MA 5.8 GB         CA 5.81 GB         Max_CA 6 GB 
+[2022-09-21 18:46:12,031] [INFO] [utils.py:597:see_memory_usage] CPU Virtual Memory:  used = 23.46 GB, percent = 1.3%
+[2022-09-21 18:46:12,081] [INFO] [utils.py:588:see_memory_usage] Before initializing optimizer states
+[2022-09-21 18:46:12,082] [INFO] [utils.py:589:see_memory_usage] MA 4.36 GB         Max_MA 4.36 GB         CA 5.81 GB         Max_CA 6 GB 
+[2022-09-21 18:46:12,082] [INFO] [utils.py:597:see_memory_usage] CPU Virtual Memory:  used = 23.46 GB, percent = 1.3%
+[2022-09-21 18:46:12,141] [INFO] [utils.py:588:see_memory_usage] After initializing optimizer states
+[2022-09-21 18:46:12,142] [INFO] [utils.py:589:see_memory_usage] MA 10.13 GB         Max_MA 13.01 GB         CA 14.46 GB         Max_CA 14 GB 
+[2022-09-21 18:46:12,142] [INFO] [utils.py:597:see_memory_usage] CPU Virtual Memory:  used = 23.46 GB, percent = 1.3%
+[2022-09-21 18:46:12,142] [INFO] [stage2.py:415:__init__] optimizer state initialized
+[2022-09-21 18:46:12,188] [INFO] [utils.py:588:see_memory_usage] After initializing ZeRO optimizer
+[2022-09-21 18:46:12,188] [INFO] [utils.py:589:see_memory_usage] MA 10.13 GB         Max_MA 10.13 GB         CA 14.46 GB         Max_CA 14 GB 
+[2022-09-21 18:46:12,189] [INFO] [utils.py:597:see_memory_usage] CPU Virtual Memory:  used = 23.46 GB, percent = 1.3%
+[2022-09-21 18:46:12,189] [INFO] [logging.py:60:log_dist] [Rank 0] DeepSpeed Final Optimizer = adam
+[2022-09-21 18:46:12,189] [INFO] [engine.py:524:_configure_lr_scheduler] DeepSpeed using client LR scheduler
+[2022-09-21 18:46:12,189] [INFO] [logging.py:60:log_dist] [Rank 0] DeepSpeed LR Scheduler = None
+[2022-09-21 18:46:12,189] [INFO] [logging.py:60:log_dist] [Rank 0] step=0, skipped=0, lr=[0.001], mom=[(0.9, 0.999)]
+Using /home/guanhuawang/.cache/torch_extensions/py38_cu113 as PyTorch extensions root...
+Emitting ninja build file /home/guanhuawang/.cache/torch_extensions/py38_cu113/async_io/build.ninja...
+Building extension module async_io...
+Allowing ninja to set a default number of workers... (overridable by setting the environment variable MAX_JOBS=N)
+ninja: no work to do.
+Loading extension module async_io...
+Time to load async_io op: 0.5492517948150635 seconds
+[2022-09-21 18:46:13,140] [INFO] [config.py:882:print] DeepSpeedEngine configuration:
+[2022-09-21 18:46:13,141] [INFO] [config.py:886:print]   activation_checkpointing_config  {
+    "partition_activations": false, 
+    "contiguous_memory_optimization": false, 
+    "cpu_checkpointing": false, 
+    "number_checkpoints": null, 
+    "synchronize_checkpoint_boundary": false, 
+    "profile": false
+}
+[2022-09-21 18:46:13,141] [INFO] [config.py:886:print]   aio_config ................... {'block_size': 8388608, 'queue_depth': 8, 'thread_count': 1, 'single_submit': False, 'overlap_events': False}
+[2022-09-21 18:46:13,141] [INFO] [config.py:886:print]   allreduce_always_fp32 ........ False
+[2022-09-21 18:46:13,141] [INFO] [config.py:886:print]   amp_enabled .................. False
+[2022-09-21 18:46:13,141] [INFO] [config.py:886:print]   amp_params ................... False
+[2022-09-21 18:46:13,141] [INFO] [config.py:886:print]   checkpoint_config ............ {'tag_validation': 'WARN', 'checkpoint_serialization': False, 'writer': {'type': 'FAST', 'io_buffer_size': 1073741824, 'io_buffer_double': False, 'show_statistics': True}}
+[2022-09-21 18:46:13,141] [INFO] [config.py:886:print]   disable_allgather ............ False
+[2022-09-21 18:46:13,141] [INFO] [config.py:886:print]   dump_state ................... False
+[2022-09-21 18:46:13,141] [INFO] [config.py:886:print]   dynamic_loss_scale_args ...... None
+[2022-09-21 18:46:13,141] [INFO] [config.py:886:print]   eigenvalue_enabled ........... False
+[2022-09-21 18:46:13,141] [INFO] [config.py:886:print]   eigenvalue_gas_boundary_resolution  1
+[2022-09-21 18:46:13,141] [INFO] [config.py:886:print]   eigenvalue_layer_name ........ bert.encoder.layer
+[2022-09-21 18:46:13,141] [INFO] [config.py:886:print]   eigenvalue_layer_num ......... 0
+[2022-09-21 18:46:13,141] [INFO] [config.py:886:print]   eigenvalue_max_iter .......... 100
+[2022-09-21 18:46:13,141] [INFO] [config.py:886:print]   eigenvalue_stability ......... 1e-06
+[2022-09-21 18:46:13,141] [INFO] [config.py:886:print]   eigenvalue_tol ............... 0.01
+[2022-09-21 18:46:13,141] [INFO] [config.py:886:print]   eigenvalue_verbose ........... False
+[2022-09-21 18:46:13,141] [INFO] [config.py:886:print]   elasticity_enabled ........... False
+[2022-09-21 18:46:13,141] [INFO] [config.py:886:print]   flops_profiler_config ........ {
+    "enabled": false, 
+    "profile_step": 1, 
+    "module_depth": -1, 
+    "top_modules": 1, 
+    "detailed": true, 
+    "output_file": null
+}
+[2022-09-21 18:46:13,141] [INFO] [config.py:886:print]   fp16_enabled ................. True
+[2022-09-21 18:46:13,141] [INFO] [config.py:886:print]   fp16_mixed_quantize .......... False
+[2022-09-21 18:46:13,141] [INFO] [config.py:886:print]   global_rank .................. 0
+[2022-09-21 18:46:13,141] [INFO] [config.py:886:print]   gradient_accumulation_steps .. 1
+[2022-09-21 18:46:13,141] [INFO] [config.py:886:print]   gradient_clipping ............ 0.0
+[2022-09-21 18:46:13,141] [INFO] [config.py:886:print]   gradient_predivide_factor .... 1.0
+[2022-09-21 18:46:13,142] [INFO] [config.py:886:print]   initial_dynamic_scale ........ 4294967296
+[2022-09-21 18:46:13,142] [INFO] [config.py:886:print]   loss_scale ................... 0
+[2022-09-21 18:46:13,142] [INFO] [config.py:886:print]   memory_breakdown ............. False
+[2022-09-21 18:46:13,142] [INFO] [config.py:886:print]   optimizer_legacy_fusion ...... False
+[2022-09-21 18:46:13,142] [INFO] [config.py:886:print]   optimizer_name ............... adam
+[2022-09-21 18:46:13,142] [INFO] [config.py:886:print]   optimizer_params ............. {}
+[2022-09-21 18:46:13,142] [INFO] [config.py:886:print]   pipeline ..................... {'stages': 'auto', 'partition': 'best', 'seed_layers': False, 'activation_checkpoint_interval': 0}
+[2022-09-21 18:46:13,142] [INFO] [config.py:886:print]   pld_enabled .................. False
+[2022-09-21 18:46:13,142] [INFO] [config.py:886:print]   pld_params ................... False
+[2022-09-21 18:46:13,142] [INFO] [config.py:886:print]   prescale_gradients ........... False
+[2022-09-21 18:46:13,142] [INFO] [config.py:886:print]   quantize_change_rate ......... 0.001
+[2022-09-21 18:46:13,142] [INFO] [config.py:886:print]   quantize_groups .............. 1
+[2022-09-21 18:46:13,142] [INFO] [config.py:886:print]   quantize_offset .............. 1000
+[2022-09-21 18:46:13,142] [INFO] [config.py:886:print]   quantize_period .............. 1000
+[2022-09-21 18:46:13,142] [INFO] [config.py:886:print]   quantize_rounding ............ 0
+[2022-09-21 18:46:13,142] [INFO] [config.py:886:print]   quantize_start_bits .......... 16
+[2022-09-21 18:46:13,142] [INFO] [config.py:886:print]   quantize_target_bits ......... 8
+[2022-09-21 18:46:13,142] [INFO] [config.py:886:print]   quantize_training_enabled .... False
+[2022-09-21 18:46:13,142] [INFO] [config.py:886:print]   quantize_type ................ 0
+[2022-09-21 18:46:13,142] [INFO] [config.py:886:print]   quantize_verbose ............. False
+[2022-09-21 18:46:13,142] [INFO] [config.py:886:print]   scheduler_name ............... None
+[2022-09-21 18:46:13,142] [INFO] [config.py:886:print]   scheduler_params ............. None
+[2022-09-21 18:46:13,142] [INFO] [config.py:886:print]   sparse_attention ............. None
+[2022-09-21 18:46:13,142] [INFO] [config.py:886:print]   sparse_gradients_enabled ..... False
+[2022-09-21 18:46:13,142] [INFO] [config.py:886:print]   steps_per_print .............. 10
+[2022-09-21 18:46:13,142] [INFO] [config.py:886:print]   tensorboard_enabled .......... False
+[2022-09-21 18:46:13,142] [INFO] [config.py:886:print]   tensorboard_job_name ......... DeepSpeedJobName
+[2022-09-21 18:46:13,142] [INFO] [config.py:886:print]   tensorboard_output_path ...... 
+[2022-09-21 18:46:13,142] [INFO] [config.py:886:print]   train_batch_size ............. 1
+[2022-09-21 18:46:13,142] [INFO] [config.py:886:print]   train_micro_batch_size_per_gpu  1
+[2022-09-21 18:46:13,142] [INFO] [config.py:886:print]   use_quantizer_kernel ......... False
+[2022-09-21 18:46:13,142] [INFO] [config.py:886:print]   wall_clock_breakdown ......... False
+[2022-09-21 18:46:13,142] [INFO] [config.py:886:print]   world_size ................... 1
+[2022-09-21 18:46:13,142] [INFO] [config.py:886:print]   zero_allow_untested_optimizer  False
+[2022-09-21 18:46:13,143] [INFO] [config.py:886:print]   zero_config .................. {
+    "stage": 2, 
+    "contiguous_gradients": false, 
+    "reduce_scatter": true, 
+    "reduce_bucket_size": 5.000000e+08, 
+    "allgather_partitions": true, 
+    "allgather_bucket_size": 5.000000e+08, 
+    "overlap_comm": false, 
+    "load_from_fp32_weights": true, 
+    "elastic_checkpoint": true, 
+    "offload_param": null, 
+    "offload_optimizer": null, 
+    "sub_group_size": 1.000000e+12, 
+    "prefetch_bucket_size": 5.000000e+07, 
+    "param_persistence_threshold": 1.000000e+05, 
+    "max_live_parameters": 1.000000e+09, 
+    "max_reuse_distance": 1.000000e+09, 
+    "gather_fp16_weights_on_model_save": false, 
+    "ignore_unused_parameters": true, 
+    "legacy_stage1": false
+}
+[2022-09-21 18:46:13,143] [INFO] [config.py:886:print]   zero_enabled ................. True
+[2022-09-21 18:46:13,143] [INFO] [config.py:886:print]   zero_optimization_stage ...... 2
+[2022-09-21 18:46:13,143] [INFO] [config.py:888:print]   json = {
+    "train_micro_batch_size_per_gpu": 1, 
+    "zero_optimization": {
+        "stage": 2, 
+        "cpu_offload": false
+    }, 
+    "fp16": {
+        "enabled": true
+    }, 
+    "optimizer": {
+        "type": "Adam", 
+        "params": {
+        }
+    }, 
+    "checkpoint": {
+        "checkpoint_serialization": false, 
+        "writer": {
+            "type": "fast", 
+            "io_buffer_size": 1.073742e+09, 
+            "io_buffer_double": false, 
+            "show_statistics": true
+        }
+    }, 
+    "aio": {
+        "block_size": 8.388608e+06, 
+        "queue_depth": 8, 
+        "single_submit": false, 
+        "overlap_events": false, 
+        "thread_count": 1
+    }
+}
+Using /home/guanhuawang/.cache/torch_extensions/py38_cu113 as PyTorch extensions root...
+No modifications detected for re-loaded extension module utils, skipping build step...
+Loading extension module utils...
+Time to load utils op: 0.00046539306640625 seconds
+[2022-09-21 18:46:13,149] [INFO] [logging.py:60:log_dist] [Rank 0] Saving model checkpoint: /home/guanhuawang/eclipse/gpt2-large/test_ds_fast_save/test_ds_fast_save/mp_rank_00_model_states.pt
+Using /home/guanhuawang/.cache/torch_extensions/py38_cu113 as PyTorch extensions root...
+No modifications detected for re-loaded extension module utils, skipping build step...
+Loading extension module utils...
+Time to load utils op: 0.0002307891845703125 seconds
+stats = {'close': 1, 'fileno': 73, 'flush': 2, 'write': 152, 'bytes': 1585909545, 'write_secs': 0.4641237258911133, 'aio_write_secs': 0.17467093467712402, 'aio_bytes': 1585909248, 'aio_gbs': 8.455860654115417, 'slow_bytes': 297, 'slow_write_secs': 0.00024700164794921875, 'fill_buffer_count': 153, 'fill_buffer_secs': 0.3299696445465088, 'fill_buffer_speed': 4.476148362022062, 'save_storage': 0, 'save_storage_bytes': 0}
+Using /home/guanhuawang/.cache/torch_extensions/py38_cu113 as PyTorch extensions root...
+No modifications detected for re-loaded extension module utils, skipping build step...
+Loading extension module utils...
+Time to load utils op: 0.0003643035888671875 seconds
+stats = {'close': 1, 'fileno': 3, 'flush': 2, 'write': 17, 'bytes': 9288390321, 'write_secs': 1.366792917251587, 'aio_write_secs': 0.8517467975616455, 'aio_bytes': 9288390144, 'aio_gbs': 10.156172524167351, 'slow_bytes': 177, 'slow_write_secs': 0.0003936290740966797, 'fill_buffer_count': 25, 'fill_buffer_secs': 0.5708425045013428, 'fill_buffer_speed': 15.153895084423882, 'save_storage': 0, 'save_storage_bytes': 0}
+[2022-09-21 18:46:17,080] [INFO] [engine.py:1961:_copy_recovery_script] creating recovery script /home/guanhuawang/eclipse/gpt2-large/test_ds_fast_save/zero_to_fp32.py
+[2022-09-21 18:46:17,080] [INFO] [engine.py:1975:_save_zero_checkpoint] zero checkpoint saved /home/guanhuawang/eclipse/gpt2-large/test_ds_fast_save/test_ds_fast_save/zero_pp_rank_0_mp_rank_00_optim_states.pt
+test_ds_fast_save -- 10.13 GB,  3.94 secs,  2.57 gb/s
+*********************************************
