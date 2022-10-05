@@ -43,6 +43,7 @@ def _get_ds_config(args, writer_type):
             "io_buffer_size": args.io_buffer_mb * (1024**2),
             "io_buffer_double": not args.single_io_buffer,
             "show_statistics": not args.no_statistics,
+            "data_parallel": not args.single_writer
         }
 
     return ds_config
