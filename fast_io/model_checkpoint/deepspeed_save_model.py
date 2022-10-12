@@ -95,15 +95,17 @@ def _get_folder_size(folder):
 def run(model, model_name, ckpt_name, args):
     print(f'Model name = {model_name}')
     writer_dict = {
-        'test_save': None,
-        'test_ds_mock_save': 'mock',
-        'test_ds_py_save': 'python',
+        # 'test_save': None,
+        # 'test_ds_mock_save': 'mock',
+        # 'test_ds_py_save': 'python',
         'test_ds_fast_save': 'fast'
     }
     for tag, writer_type in writer_dict.items():
         folder = os.path.join(args.folder, ckpt_name, tag)
         if os.path.exists(folder):
             shutil.rmtree(folder, ignore_errors=True)
+        # if not os.path.exists(folder):
+        #     os.makedirs(folder, exist_ok=True)
         write_sec = test_save(tag, folder, model, args, writer_type)
         ckpt_size = _get_folder_size(folder)
         gb_size = ckpt_size / (1024**3)

@@ -41,9 +41,9 @@ def get_model(model_tag):
 
 def validate_arguments(args):
     success = True
-    if not os.path.exists(args.folder):
-        print(f'Invalid folder: {args.folder}')
-        success = False
+    # if not os.path.exists(args.folder):
+    #     print(f'Invalid folder: {args.folder}')
+    #     success = False
 
     if not args.model in HF_MODELS:
         print(f'{args.model} is not a supported HF model tag')
