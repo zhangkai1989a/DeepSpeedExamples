@@ -4,6 +4,7 @@ import torch
 import os
 from torch_save_utils import PINNED_BUFFER_MB
 from torch_save_utils import test_save, test_ds_mock_save, test_ds_py_save, test_ds_fast_save
+import deepspeed 
 
 
 def run(args):
@@ -14,9 +15,9 @@ def run(args):
                            device=device)
 
     fn_dict = {
-        'test_save': test_save,
-        'test_ds_mock_save': test_ds_mock_save,
-        'test_ds_py_save': test_ds_py_save,
+        # 'test_save': test_save,
+        # 'test_ds_mock_save': test_ds_mock_save,
+        # 'test_ds_py_save': test_ds_py_save,
         'test_ds_fast_save': test_ds_fast_save
     }
     for tag, fn in fn_dict.items():
@@ -64,6 +65,10 @@ def parse_arguments():
     parser.add_argument('--single_io_buffer',
                         action='store_true',
                         help='Disable double buffering of i/o buffer.')
+    parser.add_argument('--local_rank',
+                        type=int,
+                        default=0,
+                        help='Local rank' )
 
     args = parser.parse_args()
     print(f'args = {args}')
@@ -78,7 +83,7 @@ def main():
     if not os.path.exists(args.folder):
         print(f'Invalid folder: {args.folder}')
         quit()
-
+    deepspeed.init_distributed()
     run(args)
 
 

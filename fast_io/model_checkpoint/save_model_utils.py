@@ -119,7 +119,7 @@ def parse_arguments():
                         help='Disable double buffering of i/o buffer.')
 
 
-    parser.add_argument('--single_writer', action='store_true', help='Disable parallel rank writes of data parallel (replicated) state')
+    #parser.add_argument('--single_writer', action='store_true', help='Disable parallel rank writes of data parallel (replicated) state')
 
     args = parser.parse_args()
     print(f'args = {args}')

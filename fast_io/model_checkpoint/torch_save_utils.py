@@ -3,7 +3,7 @@ import torch
 import os
 import deepspeed
 from deepspeed.ops.aio import AsyncIOBuilder
-from deepspeed.io import MockFileWriter, PyFileWriter, FastFileWriter
+from deepspeed.io import MockFileWriter, PyFileWriter, FastFileWriter, FastFileWriterConfig
 
 AIO_QUEUE_DEPTH = 8
 AIO_BLOCK_SIZE = 8 * (1024**2)
@@ -62,10 +62,14 @@ def test_ds_fast_save(file, buffer, args):
                                 dtype=torch.uint8,
                                 device='cpu').pin_memory()
     st = time.time()
+    config = FastFileWriterConfig(aio_handle=h,
+                                  pinned_tensor=pinned_memory,
+                                  double_buffer=not args.single_io_buffer,
+                                  num_parallel_writers=1,
+                                  writer_rank=0)
+
     ds_fast_writer = FastFileWriter(file_path=file,
-                                    aio_handle=h,
-                                    pinned_tensor=pinned_memory,
-                                    double_buffer=not args.single_io_buffer)
+                                    config=config)
     torch.save(f=ds_fast_writer,
                obj=buffer,
                _use_new_zipfile_serialization=not args.legacy)
