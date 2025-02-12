@@ -3,7 +3,7 @@ import argparse
 import torch
 import os
 from torch_save_utils import PINNED_BUFFER_MB
-from torch_save_utils import test_save, test_ds_mock_save, test_ds_py_save, test_ds_fast_save
+from torch_save_utils import test_save, test_ds_mock_save, test_ds_py_save, test_ds_aio_fast_save, test_ds_gds_fast_save
 import deepspeed 
 
 
@@ -15,12 +15,15 @@ def run(args):
                            device=device)
 
     fn_dict = {
-        # 'test_save': test_save,
-        # 'test_ds_mock_save': test_ds_mock_save,
-        # 'test_ds_py_save': test_ds_py_save,
-        'test_ds_fast_save': test_ds_fast_save
+        'test_save': test_save,
+        'test_ds_mock_save': test_ds_mock_save,
+        'test_ds_py_save': test_ds_py_save,
+        'test_ds_aio_fast_save': test_ds_aio_fast_save,
+        'test_ds_gds_fast_save': test_ds_gds_fast_save
     }
     for tag, fn in fn_dict.items():
+        if tag == 'test_ds_gds_fast_save' and not args.gpu:
+            continue 
         file = os.path.join(args.folder, f'{tag}_{args.mb_size}MB.pt')
         print(f'checkpoint file = {file}')
         if os.path.isfile(file):

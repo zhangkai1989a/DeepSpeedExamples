@@ -5,47 +5,35 @@ from transformers import T5ForConditionalGeneration
 from torch_save_utils import PINNED_BUFFER_MB
 
 
-def _get_gpt_j_6B(tag):
-    model_name = "EleutherAI/gpt-j-6B"
-    model = AutoModelForCausalLM.from_pretrained(model_name)
-    ckpt_name = "gpt-j-6B"
-    return model, model_name, ckpt_name
+TINY_T5 = 'tiny-t5'
+PHI3_MINI = 'phi3'
+PHI3_VISION = 'phi3-v'
+LLAMA3_1B = 'llama3-1B'
 
-
-def _get_tiny_t5(tag):
-    model_name = "hf-internal-testing/tiny-random-t5"
-    model = T5ForConditionalGeneration.from_pretrained(model_name)
-    ckpt_name = "tiny-random-t5"
-    return model, model_name, ckpt_name
-
-
-def _get_hf_gpt2(tag):
-    model_name = tag
-    model = AutoModelForCausalLM.from_pretrained(tag)
-    ckpt_name = tag
-    return model, model_name, ckpt_name
-
-
-HF_MODELS = {
-    'tiny-t5': _get_tiny_t5,
-    'gpt-j-6B': _get_gpt_j_6B,
-    'gpt2': _get_hf_gpt2,
-    'gpt2-large': _get_hf_gpt2,
-    'gpt2-xl': _get_hf_gpt2,
+HF_MODELS_DICT = {
+    TINY_T5: "hf-internal-testing/tiny-random-t5",
+    PHI3_MINI: "microsoft/Phi-3.5-mini-instruct",
+    PHI3_VISION: "microsoft/Phi-3.5-vision-instruct",
+    LLAMA3_1B: "meta-llama/Llama-3.2-1B",
 }
 
+def _get_hf_model(tag):
+    model_name = HF_MODELS_DICT[tag]
+    if tag == TINY_T5:
+        model = T5ForConditionalGeneration.from_pretrained(model_name)
+    else:
+        model = AutoModelForCausalLM.from_pretrained(model_name)
+
+    return model, model_name, tag
 
 def get_model(model_tag):
-    return HF_MODELS[model_tag](model_tag)
+    return _get_hf_model(model_tag)
 
 
 def validate_arguments(args):
     success = True
-    # if not os.path.exists(args.folder):
-    #     print(f'Invalid folder: {args.folder}')
-    #     success = False
 
-    if not args.model in HF_MODELS:
+    if not args.model in HF_MODELS_DICT:
         print(f'{args.model} is not a supported HF model tag')
         success = False
 
@@ -70,7 +58,7 @@ def parse_arguments():
         default=None,
         type=str,
         required=True,
-        help='Hugging Face transformers tag of model (e.g., gpt2).')
+        help=f'Hugging Face transformers tag of model. Available models = {list(HF_MODELS_DICT.keys())}')
 
     parser.add_argument('--local_rank',
                         type=int,

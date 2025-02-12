@@ -2,12 +2,13 @@ import time
 import torch
 import os
 import deepspeed
-from deepspeed.ops.aio import AsyncIOBuilder
+from deepspeed.ops.op_builder import AsyncIOBuilder, GDSBuilder
 from deepspeed.io import MockFileWriter, PyFileWriter, FastFileWriter, FastFileWriterConfig
+from deepspeed.accelerator import get_accelerator
 
 AIO_QUEUE_DEPTH = 8
 AIO_BLOCK_SIZE = 8 * (1024**2)
-AIO_THREAD_COUNT = 1
+AIO_INTRA_OP_PARALLEL = 1
 AIO_SINGLE_SUBMIT = False
 AIO_OVERLAP_EVENTS = False
 PINNED_BUFFER_MB = 64
@@ -18,9 +19,16 @@ def _get_aio_handle():
                                            queue_depth=AIO_QUEUE_DEPTH,
                                            single_submit=AIO_SINGLE_SUBMIT,
                                            overlap_events=AIO_SINGLE_SUBMIT,
-                                           num_threads=AIO_THREAD_COUNT)
+                                           intra_op_parallelism=AIO_INTRA_OP_PARALLEL)
     return h
 
+def _get_gds_handle():
+    h = GDSBuilder().load().gds_handle(block_size=AIO_BLOCK_SIZE,
+                                    queue_depth=AIO_QUEUE_DEPTH,
+                                    single_submit=AIO_SINGLE_SUBMIT,
+                                    overlap_events=AIO_SINGLE_SUBMIT,
+                                    intra_op_parallelism=AIO_INTRA_OP_PARALLEL)
+    return h
 
 def test_save(file, buffer, args):
     st = time.time()
@@ -55,21 +63,37 @@ def test_ds_py_save(file, buffer, args):
         ds_py_writer._dump_state()
     return write_sec
 
-
-def test_ds_fast_save(file, buffer, args):
+def _get_aio_components(args):
     h = _get_aio_handle()
     pinned_memory = torch.zeros(args.io_buffer_mb * (1024**2),
                                 dtype=torch.uint8,
                                 device='cpu').pin_memory()
+    return h, pinned_memory
+
+def _get_gds_components(args):
+    h = _get_gds_handle()
+    pinned_memory = torch.empty(args.io_buffer_mb * (1024**2), 
+                                dtype=torch.uint8, 
+                                device=get_accelerator().device_name())
+    h.pin_device_tensor(pinned_memory)
+    return h, pinned_memory
+
+
+
+def _test_ds_fast_save(file, buffer, args, use_gds):
+    if use_gds:
+        h, pinned_memory = _get_gds_components(args)
+    else:
+        h, pinned_memory = _get_aio_components(args)
     st = time.time()
-    config = FastFileWriterConfig(aio_handle=h,
+    fast_writer_config = FastFileWriterConfig(aio_handle=h,
                                   pinned_tensor=pinned_memory,
                                   double_buffer=not args.single_io_buffer,
                                   num_parallel_writers=1,
                                   writer_rank=0)
 
     ds_fast_writer = FastFileWriter(file_path=file,
-                                    config=config)
+                                    config=fast_writer_config)
     torch.save(f=ds_fast_writer,
                obj=buffer,
                _use_new_zipfile_serialization=not args.legacy)
@@ -78,3 +102,10 @@ def test_ds_fast_save(file, buffer, args):
     if not args.no_statistics:
         ds_fast_writer._dump_state()
     return write_sec
+
+
+def test_ds_aio_fast_save(file, buffer, args):
+    return _test_ds_fast_save(file, buffer, args, False)
+
+def test_ds_gds_fast_save(file, buffer, args):
+    return _test_ds_fast_save(file, buffer, args, True)
