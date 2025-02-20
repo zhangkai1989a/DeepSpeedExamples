@@ -6,10 +6,10 @@ import gc
 import random
 import numpy as np
 import deepspeed
+from deepspeed.accelerator import get_accelerator
 from save_model_utils import get_model, validate_arguments, parse_arguments
 
-
-def _get_ds_config(args, writer_type):
+def _get_ds_config(args, writer_type, use_gds):
     ds_config = {
         "train_micro_batch_size_per_gpu": 1,
         "zero_optimization": {
@@ -33,7 +33,8 @@ def _get_ds_config(args, writer_type):
             "queue_depth": 8,
             "single_submit": False,
             "overlap_events": True,
-            "thread_count": 2,
+            "intra_op_parallelism": 2,
+            "use_gds": use_gds,
         }
     }
 
@@ -69,11 +70,12 @@ def _free_ds_memory(ds_engine):
     ds_engine = None
     del ds_engine
     gc.collect()
-    torch.cuda.empty_cache()
+    get_accelerator().empty_cache()
 
 
 def test_save(tag, folder, model, args, writer_type):
-    ds_config = _get_ds_config(args, writer_type)
+    use_gds = writer_type == 'fast' and 'gds' in tag
+    ds_config = _get_ds_config(args, writer_type, use_gds)
     ds_engine = _get_ds_engine(model, ds_config)
     if args.zero_stage == 0:
         _do_optimizer_step(ds_engine)
@@ -95,10 +97,11 @@ def _get_folder_size(folder):
 def run(model, model_name, ckpt_name, args):
     print(f'Model name = {model_name}')
     writer_dict = {
-        # 'test_save': None,
-        # 'test_ds_mock_save': 'mock',
-        # 'test_ds_py_save': 'python',
-        'test_ds_fast_save': 'fast'
+        'test_save': None,
+        'test_ds_mock_save': 'mock',
+        'test_ds_py_save': 'python',
+        'test_ds_aio_fast_save': 'fast',
+        'test_ds_gds_fast_save': 'fast',
     }
     for tag, writer_type in writer_dict.items():
         folder = os.path.join(args.folder, ckpt_name, tag)
@@ -111,7 +114,7 @@ def run(model, model_name, ckpt_name, args):
         gb_size = ckpt_size / (1024**3)
         gb_per_sec = gb_size / write_sec
         print(
-            f'{tag} -- {gb_size:5.2f} GB, {write_sec:5.2f} secs, {gb_per_sec:5.2f} gb/s'
+            f'{tag} -- {gb_size:5.2f} GB, {write_sec:5.2f} secs, {gb_per_sec:5.2f} GB/s'
         )
         print(f'*********************************************')
 

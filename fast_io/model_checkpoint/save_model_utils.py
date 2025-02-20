@@ -5,6 +5,7 @@ from transformers import T5ForConditionalGeneration
 from torch_save_utils import PINNED_BUFFER_MB
 
 
+GPT2L = 'gpt2-large'
 TINY_T5 = 'tiny-t5'
 PHI3_MINI = 'phi3'
 PHI3_VISION = 'phi3-v'
@@ -12,6 +13,7 @@ LLAMA3_1B = 'llama3-1B'
 
 HF_MODELS_DICT = {
     TINY_T5: "hf-internal-testing/tiny-random-t5",
+    GPT2L: GPT2L,
     PHI3_MINI: "microsoft/Phi-3.5-mini-instruct",
     PHI3_VISION: "microsoft/Phi-3.5-vision-instruct",
     LLAMA3_1B: "meta-llama/Llama-3.2-1B",
@@ -58,7 +60,7 @@ def parse_arguments():
         default=None,
         type=str,
         required=True,
-        help=f'Hugging Face transformers tag of model. Available models = {list(HF_MODELS_DICT.keys())}')
+        help=f'HuggingFace tag of model. Available models = {list(HF_MODELS_DICT.keys())}')
 
     parser.add_argument('--local_rank',
                         type=int,

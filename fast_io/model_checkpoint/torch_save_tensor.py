@@ -5,19 +5,20 @@ import os
 from torch_save_utils import PINNED_BUFFER_MB
 from torch_save_utils import test_save, test_ds_mock_save, test_ds_py_save, test_ds_aio_fast_save, test_ds_gds_fast_save
 import deepspeed 
+from deepspeed.accelerator import get_accelerator
 
 
 def run(args):
-    device = torch.cuda.current_device() if args.gpu else 'cpu'
+    device = get_accelerator().current_device_name() if args.gpu else 'cpu'
     buffer = torch.randint(high=128,
                            size=(args.mb_size * (1024**2), ),
                            dtype=torch.uint8,
                            device=device)
 
     fn_dict = {
-        'test_save': test_save,
-        'test_ds_mock_save': test_ds_mock_save,
-        'test_ds_py_save': test_ds_py_save,
+        # 'test_save': test_save,
+        # 'test_ds_mock_save': test_ds_mock_save,
+        # 'test_ds_py_save': test_ds_py_save,
         'test_ds_aio_fast_save': test_ds_aio_fast_save,
         'test_ds_gds_fast_save': test_ds_gds_fast_save
     }
@@ -33,7 +34,7 @@ def run(args):
         gb_per_sec = args.mb_size / (1024.0 * write_sec)
         gb_size = os.path.getsize(file) / (1024**3)
         print(
-            f'{tag} -- {gb_size:5.2f} GB, {write_sec:5.2f} secs, {gb_per_sec:5.2f} gb/s'
+            f'{tag} -- {gb_size:5.2f} GB, {write_sec:5.2f} secs, {gb_per_sec:5.2f} GB/s'
         )
         print(f'*********************************************')
 

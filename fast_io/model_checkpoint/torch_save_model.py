@@ -4,16 +4,18 @@ from torch.optim import Adam
 import os
 from torch_save_utils import test_save, test_ds_mock_save, test_ds_py_save, test_ds_aio_fast_save, test_ds_gds_fast_save
 from save_model_utils import get_model, validate_arguments, parse_arguments
+import deepspeed
+from deepspeed.accelerator import get_accelerator
 
 
 def run(model, model_name, ckpt_name, args):
     print(f'Model name = {model_name}')
     fn_dict = {
-        # 'test_save': test_save,
-        # 'test_ds_mock_save': test_ds_mock_save,
-        # 'test_ds_py_save': test_ds_py_save,
-        # 'test_ds_aio_fast_save': test_ds_aio_fast_save,
-        'test_ds_gds_fast_save': test_ds_gds_fast_save
+        'test_save': test_save,
+        'test_ds_mock_save': test_ds_mock_save,
+        'test_ds_py_save': test_ds_py_save,
+        'test_ds_gds_fast_save': test_ds_gds_fast_save,
+        'test_ds_aio_fast_save': test_ds_aio_fast_save,
     }
     for tag, fn in fn_dict.items():
         if tag == 'test_ds_gds_fast_save' and not args.gpu:
@@ -28,14 +30,13 @@ def run(model, model_name, ckpt_name, args):
         gb_size = ckpt_size / (1024**3)
         gb_per_sec = gb_size / write_sec
         print(
-            f'{tag} -- {gb_size:5.2f} GB, {write_sec:5.2f} secs, {gb_per_sec:5.2f} gb/s'
+            f'{tag} -- {gb_size:5.2f} GB, {write_sec:5.2f} secs, {gb_per_sec:5.2f} GB/s'
         )
         print(f'*********************************************')
 
 
 def _get_initialized_optimizer(model, fused_opt):
     base_optimizer = Adam(model.parameters())
-    import deepspeed
     if fused_opt:
         from deepspeed.runtime.fp16.fused_optimizer import FP16_Optimizer as FP16_Wrapper
     else:
@@ -62,7 +63,7 @@ def main():
     if args.half:
         model = model.half()
     if args.gpu:
-        model = model.cuda()
+        model = model.to(get_accelerator().current_device_name())
     if args.optimizer:
         optimizer = _get_initialized_optimizer(model, args.fused)
         ckpt_state = {'model': model, 'optimizer': optimizer}

@@ -15,7 +15,7 @@ PINNED_BUFFER_MB = 64
 
 
 def _get_aio_handle():
-    h = AsyncIOBuilder().load().aio_handle(block_size=AIO_BLOCK_SIZE,
+    h = AsyncIOBuilder().load(verbose=False).aio_handle(block_size=AIO_BLOCK_SIZE,
                                            queue_depth=AIO_QUEUE_DEPTH,
                                            single_submit=AIO_SINGLE_SUBMIT,
                                            overlap_events=AIO_SINGLE_SUBMIT,
@@ -23,7 +23,7 @@ def _get_aio_handle():
     return h
 
 def _get_gds_handle():
-    h = GDSBuilder().load().gds_handle(block_size=AIO_BLOCK_SIZE,
+    h = GDSBuilder().load(verbose=False).gds_handle(block_size=AIO_BLOCK_SIZE,
                                     queue_depth=AIO_QUEUE_DEPTH,
                                     single_submit=AIO_SINGLE_SUBMIT,
                                     overlap_events=AIO_SINGLE_SUBMIT,
@@ -74,7 +74,7 @@ def _get_gds_components(args):
     h = _get_gds_handle()
     pinned_memory = torch.empty(args.io_buffer_mb * (1024**2), 
                                 dtype=torch.uint8, 
-                                device=get_accelerator().device_name())
+                                device=get_accelerator().current_device_name())
     h.pin_device_tensor(pinned_memory)
     return h, pinned_memory
 
@@ -86,7 +86,7 @@ def _test_ds_fast_save(file, buffer, args, use_gds):
     else:
         h, pinned_memory = _get_aio_components(args)
     st = time.time()
-    fast_writer_config = FastFileWriterConfig(aio_handle=h,
+    fast_writer_config = FastFileWriterConfig(dnvme_handle=h,
                                   pinned_tensor=pinned_memory,
                                   double_buffer=not args.single_io_buffer,
                                   num_parallel_writers=1,
