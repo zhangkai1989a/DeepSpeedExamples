@@ -1,16 +1,26 @@
+# DeepSpeed Examples
+This repository contains various examples including training, inference, compression, benchmarks, and applications that use [DeepSpeed](https://github.com/microsoft/DeepSpeed).
 
-# DeepSpeed
-This repo contains example models that use [DeepSpeed](https://github.com/microsoft/DeepSpeed).
+## 1. Applications
+This folder contains end-to-end applications that use DeepSpeed to train and use cutting-edge models.
 
-# Note on Megatron examples
+## 2. Training
+There are several training and finetuning examples so please see the individual folders for specific instructions.
 
-Megatron-LM : This is a fairly old snapshot of Megatron-LM , and we have been using it show case the earlier features of DeepSpeed. This does not contain ZeRO-3 or 3D parallelism.
+## 3. Inference
+- The DeepSpeed-MII inference [README](./inference/mii/README.md) explains how to get started with running model inference with [DeepSpeed-MII](https://github.com/Microsoft/DeepSpeed-MII) and [DeepSpeed-FastGen](https://github.com/microsoft/DeepSpeed/tree/master/blogs/deepspeed-fastgen).
+- The DeepSpeed Huggingface inference [README](./inference/huggingface/README.md) explains how to get started with running DeepSpeed Huggingface inference examples.
 
-Megatron-LM-v1.1.5-3D_parallelism: This is a relatively new Megatron (Oct 2020), but before Megatron started supporting 3D parallelism. We ported this version to showcase how to use 3D parallelism inside DeepSpeed with Megatron.
+## 4. Compression
+Model compression examples.
 
-Megatron-LM-v1.1.5-ZeRO3: The underlying Megatron version is same as the 3D_parallelism but it does not contain the 3D parallelism port. It however contains the most recent advances in DeepSpeed including ZeRO-3, ZeRO-3 Offload and ZeRO-Infinity. We did this separately from 3D parallelism port to isolate the changes required for each of them and to avoid users combining them together which is not supported, and will likely lead to more confusion.
+## 5. Benchmarks
+All benchmarks that use the DeepSpeed library are maintained in this folder.
 
-Since the 3D parallelism is quite similar in both DeepSpeed and new Megatron, we don't have plans to update to new version immediately. But we do plan to update it in future as Megatron-LM adds more differentiating features.
+# Build Pipeline Status
+| Description | Status |
+| ----------- | ------ |
+| Integrations | [![nv-ds-chat](https://github.com/microsoft/DeepSpeed/actions/workflows/nv-ds-chat.yml/badge.svg?branch=master)](https://github.com/microsoft/DeepSpeed/actions/workflows/nv-ds-chat.yml) |
 
 # Contributing
 
