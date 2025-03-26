@@ -6,6 +6,7 @@ from torch_save_utils import test_save, test_ds_mock_save, test_ds_py_save, test
 from save_model_utils import get_model, validate_arguments, parse_arguments
 import deepspeed
 from deepspeed.accelerator import get_accelerator
+import deepspeed.comm as dist
 
 
 def run(model, model_name, ckpt_name, args):
@@ -59,6 +60,7 @@ def main():
     if not validate_arguments(args):
         quit()
 
+    deepspeed.init_distributed()
     model, model_name, ckpt_name = get_model(args.model)
     if args.half:
         model = model.half()
@@ -70,6 +72,7 @@ def main():
     else:
         ckpt_state = {'model': model}
     run(ckpt_state, model_name, ckpt_name, args)
+    dist.destroy_process_group()
 
 
 if __name__ == "__main__":

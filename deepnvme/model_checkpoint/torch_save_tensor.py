@@ -7,50 +7,9 @@ from torch_save_utils import test_save, test_ds_mock_save, test_ds_py_save, test
 import deepspeed 
 from deepspeed.accelerator import get_accelerator
 import deepspeed.comm as dist
-import multiprocessing as mp
 import os 
 
-FUNC_DICT = {
-    # 'test_save': test_save,
-    # 'test_ds_mock_save': test_ds_mock_save,
-    # 'test_ds_py_save': test_ds_py_save,
-    'test_ds_gds_fast_save': test_ds_gds_fast_save,
-    # 'test_ds_aio_fast_save': test_ds_aio_fast_save,
-}
-
 def run(args):
-
-    for tag, fn in FUNC_DICT.items():
-        if tag == 'test_ds_gds_fast_save' and not args.gpu:
-            continue 
-        print(f"launching {tag=} from {os.getpid()=}")
-        mp.set_start_method('spawn', force=True)
-        run_save_method(tag, args)
-
-
-def run_save_method(tag, args):
-    print(f"running {tag=} from {os.getpid()=}")
-    device = get_accelerator().current_device_name() if args.gpu else 'cpu'
-    buffer = torch.randint(high=128,
-                           size=(args.mb_size * (1024**2), ),
-                           dtype=torch.uint8,
-                           device=device)
-   
-    file = os.path.join(args.folder, f'{tag}_{args.mb_size}MB.pt')
-    print(f'checkpoint file = {file}')
-    if os.path.isfile(file):
-        os.remove(file)
-    st = time.time()
-    write_sec = FUNC_DICT[tag](file, buffer, args)
-    gb_per_sec = args.mb_size / (1024.0 * write_sec)
-    gb_size = os.path.getsize(file) / (1024**3)
-    print(
-        f'{tag} -- {gb_size:5.2f} GB, {write_sec:5.2f} secs, {gb_per_sec:5.2f} GB/s'
-    )
-    print(f'*********************************************')
-
-
-def old_run(args):
     device = get_accelerator().current_device_name() if args.gpu else 'cpu'
     buffer = torch.randint(high=128,
                            size=(args.mb_size * (1024**2), ),
@@ -61,8 +20,8 @@ def old_run(args):
         'test_save': test_save,
         'test_ds_mock_save': test_ds_mock_save,
         'test_ds_py_save': test_ds_py_save,
-        # 'test_ds_aio_fast_save': test_ds_aio_fast_save,
-        'test_ds_gds_fast_save': test_ds_gds_fast_save
+        'test_ds_gds_fast_save': test_ds_gds_fast_save,
+        'test_ds_aio_fast_save': test_ds_aio_fast_save,
     }
     for tag, fn in fn_dict.items():
         if tag == 'test_ds_gds_fast_save' and not args.gpu:
