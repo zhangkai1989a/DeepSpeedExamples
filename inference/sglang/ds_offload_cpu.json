@@ -1,0 +1,13 @@
+{
+    "zero_optimization": {
+        "stage": 3,
+        "stage3_prefetch_bucket_size": "auto",
+        "stage3_param_persistence_threshold": "auto",
+        "stage3_max_live_parameters": "auto",
+        "offload_param": {
+            "device": "cpu",
+            "buffer_size": "auto"
+        }
+    },
+    "train_batch_size": 1
+}
