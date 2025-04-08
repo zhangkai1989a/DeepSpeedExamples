@@ -7,6 +7,7 @@
         "offload_param": {
             "device": "nvme",
             "nvme_path": "/local_nvme/sglang",
+            "pin_memory": true,
             "buffer_size": "auto",
             "buffer_count": 3
         }

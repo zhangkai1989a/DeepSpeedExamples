@@ -6,6 +6,7 @@
         "stage3_max_live_parameters": "auto",
         "offload_param": {
             "device": "cpu",
+            "pin_memory": true,
             "buffer_size": "auto"
         }
     },
