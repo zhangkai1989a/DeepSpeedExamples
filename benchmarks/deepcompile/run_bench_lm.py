@@ -11,6 +11,7 @@ from datasets import load_dataset, DownloadConfig
 from accelerate import Accelerator
 from torch.utils.data import DataLoader
 from torch.utils.data.distributed import DistributedSampler
+from torch.utils.data import SequentialSampler
 
 from datasets.utils.logging import disable_progress_bar
 
@@ -19,8 +20,8 @@ from patch_phi3_moe import patch_phi3moe
 def get_args():
     parser = argparse.ArgumentParser()
     parser.add_argument("--model_name", type=str, default="meta-llama/Llama-2-7b-hf")
-    parser.add_argument("--batch_size", type=int, default=2)
-    parser.add_argument("--num_epochs", type=int, default=1)
+    parser.add_argument("--batch_size", type=int, default=1)
+    parser.add_argument("--num_epochs", type=int, default=100)
     parser.add_argument("--seq_length", type=int, default=512)
     parser.add_argument("--learning_rate", type=float, default=2e-5)
     parser.add_argument("--max_grad_norm", type=float, default=1.0)
@@ -36,8 +37,8 @@ def get_args():
     parser.add_argument("--profile", action="store_true")
     parser.add_argument("--deterministic", action="store_true")
     parser.add_argument("--profile_dir", type=str, default=None)
-    parser.add_argument("--bench_step", type=int, default=10)
-    parser.add_argument("--warmup_step", type=int, default=1)
+    parser.add_argument("--bench_step", type=int, default=30)
+    parser.add_argument("--warmup_step", type=int, default=15)
     parser.add_argument("--zero_stage", type=int, default=3)
     parser.add_argument("--print_interval", type=int, default=1)
     parser.add_argument("--save_weights", action="store_true")
@@ -47,23 +48,34 @@ def get_args():
 
 
 def make_schedule(passes: List[str], warmup):
-    from deepspeed.compile.passes import zero3_compile, prefetch, selective_gather, offload_parameters
+    from deepspeed.compile.passes import zero3_compile, prefetch, selective_gather, offload_adam_states
 
     schedule = []
-    schedule.append((0, [zero3_compile.add_z3_gather_release]))
 
-    second_opt = [zero3_compile.add_z3_gather_release]
-    if "prefetch" in passes:
-        second_opt.append(prefetch.schedule_prefetch)
-    if "selective_gather" in passes:
-        second_opt.append(selective_gather.selective_gather)
-    schedule.append((warmup, second_opt))
+    if "offload_adam_states" in passes:
+        assert len(passes) == 1, "offload_adam_states should be the only pass"
+        schedule.append((0, [offload_adam_states.offload_adam_states_for_init, zero3_compile.add_z3_gather_release, offload_adam_states.move_opt_states_sync]))
+        schedule.append((5, [offload_adam_states.offload_adam_states_for_init, zero3_compile.add_z3_gather_release, offload_adam_states.move_opt_states]))
+    elif "offload_adam_states_sync" in passes:
+        assert len(passes) == 1, "offload_adam_states_sync should be the only pass"
+        schedule.append((0, [zero3_compile.add_z3_gather_release, offload_adam_states.move_opt_states_sync]))
+    else:
+        schedule.append((0, [zero3_compile.add_z3_gather_release]))
+        second_opt = [zero3_compile.add_z3_gather_release]
+        if "prefetch" in passes:
+            second_opt.append(prefetch.schedule_prefetch)
+        if "selective_gather" in passes:
+            second_opt.append(selective_gather.selective_gather)
+        schedule.append((warmup, second_opt))
     return schedule
 
 
 def main():
     args = get_args()
     print(args)
+
+    if "offload_adam_states" in args.passes:
+        os.environ['PYTORCH_CUDA_ALLOC_CONF'] = 'max_split_size_mb:128'
 
     if args.deterministic:
         enable_full_determinism(1)
@@ -83,23 +95,7 @@ def main():
 
     model_weight_path = f"{model_name.split('/')[1]}_cp_layer{args.num_layers}"
     if args.load_weights:
-        from deepspeed.runtime.zero import GatheredParameters
-
-        # model_weight = AutoModelForCausalLM.from_pretrained(model_weight_path, trust_remote_code=True)
-        model_config = AutoConfig.from_pretrained(model_name, trust_remote_code=True)
-        print(f"num_hidden_layers: {model_config.num_hidden_layers} -> {args.num_layers}")
-        model_config.num_hidden_layers = args.num_layers
-        # model_config.num_local_experts = 1
-        # model_config.num_experts_per_tok = 1
-        # from modeling_custom_mixtral import MixtralForCausalLM
-        # model = MixtralForCausalLM(model_config)
-        # state_dict = model_weight.state_dict()
-        # for name, param in model.named_parameters():
-        #     if name in state_dict:
-        #         # with GatheredParameters([param], modifier_rank=0, enabled=is_deepspeed and args.zero_stage == 3):
-        #         with GatheredParameters([param], modifier_rank=0):
-        #             state_dict[name].copy_(param)
-
+        model = AutoModelForCausalLM.from_pretrained(model_weight_path, trust_remote_code=True)
     else:
         if args.num_layers > 0:
             model_config = AutoConfig.from_pretrained(model_name, trust_remote_code=True)
@@ -111,23 +107,6 @@ def main():
 
     if patch_phi3moe(model) and accelerator.is_main_process:
         print("Patched Phi-3.5-MoE model")
-
-    # for n, m in model.named_modules():
-    #     def wrap(name):
-    #         def hook(module, grad_in, grad_output):
-    #             msg = f"{name} {module.__class__}"
-    #             for i, inp in enumerate(grad_in):
-    #                 if torch.is_tensor(inp):
-    #                     if torch.is_floating_point(inp):
-    #                         msg += f" grad_in[{i}] {inp.shape} norm={inp.norm()} {inp.flatten()[:5]}"
-    #                     else:
-    #                         msg += f" grad_in[{i}] {inp.shape} {inp.flatten()[:5]}"
-    #             for i, out in enumerate(grad_output):
-    #                 if torch.is_tensor(out):
-    #                     msg += f" grad_out[{i}] {out.shape} norm={out.norm()} {out.flatten()[:5]}"
-    #             print(msg)
-    #         return hook
-    #     m.register_full_backward_hook(wrap(n))
 
     tokenizer = AutoTokenizer.from_pretrained(model_name, trust_remote_code=True)
 
@@ -153,7 +132,7 @@ def main():
     def tokenize_function(examples):
         return tokenizer(examples['text'], padding='max_length', max_length=args.seq_length, truncation=True)
 
-    tokenized_dataset = dataset.map(tokenize_function, batched=True)
+    tokenized_dataset = dataset.map(tokenize_function, batched=True, num_proc=1, keep_in_memory=True)
     tokenized_dataset.set_format(type='torch', columns=['input_ids', 'attention_mask'])
 
     sampler = DistributedSampler(tokenized_dataset, num_replicas=accelerator.num_processes, rank=accelerator.process_index)
@@ -166,27 +145,18 @@ def main():
     model, optimizer, data_loader = accelerator.prepare(model, optimizer, data_loader)
     print(f"Model prepared: {model.__class__} optimizer: {optimizer.__class__}")
 
+    if "Mixtral" in model_name:
+        torch._dynamo.config.capture_dynamic_output_shape_ops = True
+        torch._dynamo.config.capture_scalar_outputs = True
+
+
     if is_deepspeed:
         if args.compile:
-            torch._dynamo.config.capture_dynamic_output_shape_ops = True
-            torch._dynamo.config.capture_scalar_outputs = True
-
             schedule = make_schedule(args.passes.split(","), warmup=5) if args.passes else None
             model.compile(backend=args.backend, schedule=schedule)
     else:
         if args.compile:
-            torch._dynamo.config.capture_dynamic_output_shape_ops = True
-            torch._dynamo.config.capture_scalar_outputs = True
-
-            # def debug_print_backend(gm: torch.fx.GraphModule, real_inputs):
-            #     import torch._inductor as inductor
-            #     print(f"debug_print_backend [NO_DS]: {gm.graph}")
-            #     mod = inductor.compile(gm, real_inputs)
-            #     return mod
-                # return gm.forward
-
             model = torch.compile(model, backend=args.backend)
-            # model = torch.compile(model, backend=debug_print_backend)
 
     timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
     model_name = args.model_name.split("/")[-1]
@@ -211,13 +181,12 @@ def main():
             torch.profiler.ProfilerActivity.CPU,
             torch.profiler.ProfilerActivity.CUDA,
         ],
-        schedule=torch.profiler.schedule(wait=0, warmup=10*args.gradient_accumulation_steps, active=4, repeat=1),
+        schedule=torch.profiler.schedule(wait=0, warmup=10*args.gradient_accumulation_steps, active=3, repeat=1),
         on_trace_ready=torch.profiler.tensorboard_trace_handler(prof_dir),
     ) if do_profile else nullcontext()
 
     # Training loop
     model.train()
-    # model.eval()
     global_step = 0
 
     iter_times = []
@@ -225,6 +194,7 @@ def main():
     # See https://github.com/microsoft/DeepSpeed/issues/6793
     acc_context = nullcontext if is_deepspeed else accelerator.accumulate
 
+    stop = False
     with prof_context as prof:
         for epoch in range(args.num_epochs):
             start_iter = time.time()
@@ -234,22 +204,14 @@ def main():
                 attention_mask = batch['attention_mask'].to(device)
 
                 with acc_context(model):
-                    # with torch.autocast("cuda", dtype=torch.bfloat16):
                     outputs = model(input_ids=input_ids, attention_mask=attention_mask, labels=input_ids, use_cache=False)
                     loss = outputs.loss
-
-                    print(f"Epoch {epoch+1}, Step {step+1}, Loss: {loss.item()}")
 
                     update_step = (is_deepspeed and model.is_gradient_accumulation_boundary()) \
                         or (not is_deepspeed and accelerator.sync_gradients)
                     accelerator.backward(loss)
-
-                    if accelerator.sync_gradients:
-                        accelerator.clip_grad_norm_(model.parameters(), args.max_grad_norm)
-
                     optimizer.step()
                     optimizer.zero_grad()
-
                     global_step += 1
 
                     if update_step:
@@ -262,8 +224,11 @@ def main():
                 if do_profile:
                     prof.step()
 
-                if global_step >= args.bench_step * args.gradient_accumulation_steps:
+                stop = global_step >= args.bench_step * args.gradient_accumulation_steps
+                if stop:
                     break
+            if stop:
+                break
 
     iter_times = iter_times[args.warmup_step:]
 
@@ -274,8 +239,7 @@ def main():
             compile_time = model.get_compile_time()
             compile_time_sum = sum(t for _, _, _, t in compile_time)
 
-        # is_deepcompile = is_deepspeed and model._config.compile_config.deepcompile
-        is_deepcompile = is_deepspeed
+        is_deepcompile = is_deepspeed and model._config.compile_config.deepcompile
         msg = f"{args.model_name} ds={is_deepspeed} np={accelerator.num_processes} batch_size={args.batch_size} seq={args.seq_length} zero_stage={args.zero_stage} acc={args.gradient_accumulation_steps} ac={args.activation_checkpointing} compile={args.compile} backend={args.backend} deepcompile={is_deepcompile} passes={args.passes} compile_time={compile_time_sum} iteration time: {sum(iter_times) / len(iter_times):.4f} alloc_mem: {torch.cuda.memory_allocated()} peak_mem: {torch.cuda.max_memory_allocated()}"
         print(msg)
 
@@ -302,11 +266,5 @@ if __name__ == "__main__":
     torch._dynamo.config.accumulated_cache_size_limit = 256
     torch._dynamo.config.cache_size_limit = 128
     torch._dynamo.config.optimize_ddp = False
-    import logging
-    # torch._logging.set_logs(graph_breaks=True, inductor=logging.DEBUG, output_code=True, schedule=True)
-    torch._logging.set_logs(graph_breaks=True)
-
-    # torch._inductor.config.debug = True
-    # torch._inductor.config.trace.enabled = True
 
     main()

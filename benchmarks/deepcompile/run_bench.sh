@@ -7,8 +7,8 @@ ACC_OPTS="--gradient-accumulation-steps 1"
 AC_OPTS="--activation-checkpointing"
 
 MODEL="meta-llama/Meta-Llama-3-70B-Instruct"
-BATCH_SIZE_OPTS=(1)
-SEQ_LENGTH_OPTS=(512)
+BATCH_SIZE_OPTS=(1 2 4)
+SEQ_LENGTH_OPTS=(512 1024 2048)
 for BATCH_SIZE in ${BATCH_SIZE_OPTS[@]}; do
     for SEQ_LENGTH in ${SEQ_LENGTH_OPTS[@]}; do
         # skip if batch size is 4 and seq length is 2048, as it causes OOM
