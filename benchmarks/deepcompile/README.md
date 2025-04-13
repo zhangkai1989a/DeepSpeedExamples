@@ -10,7 +10,7 @@ We tested the scripts with Python 3.10.12 and CUDA 12.4.
 In addition, you need to install the following:
 
 - PyTorch v2.6.0
-- DeepSpeed v0.16.5
+- DeepSpeed (latest revision)
 - transformers
 - accelerate
 - datasets v3.1
