@@ -10,7 +10,7 @@ We tested the scripts with Python 3.10.12 and CUDA 12.4.
 In addition, you need to install the following:
 
 - PyTorch v2.6.0
-- DeepSpeed (latest revision)
+- DeepSpeed (v0.16.6 or newer)
 - transformers
 - accelerate
 - datasets v3.1
@@ -21,9 +21,8 @@ Here are an example of installation commands:
 pip3 install torch==2.6.0 torchvision torchaudio
 pip3 install transformers datasets==3.1 accelerate
 
-# Install DeepSpeed and DeepCompile
-git clone https://github.com/deepspeedai/DeepSpeed
-pip install -e DeepSpeed
+# Install DeepSpeed
+pip install deepspeed
 
 # Clone this repository
 git clone https://github.com/deepspeedai/DeepSpeedExamples
@@ -150,4 +149,3 @@ Each optimization pass takes a standardized set of arguments provided by DeepCom
 - [Selective unsharding](https://github.com/deepspeedai/DeepSpeed/blob/tohtana/deepcompile/deepspeed/compile/passes/selective_gather.py)
 - [Reduce-scatter insertion (ZeRO1)](https://github.com/deepspeedai/DeepSpeed/blob/tohtana/deepcompile/deepspeed/compile/passes/zero1_compile.py)
 - [Adaptive offloading](https://github.com/deepspeedai/DeepSpeed/blob/tohtana/deepcompile/deepspeed/compile/passes/offload_adam_states.py)
-
