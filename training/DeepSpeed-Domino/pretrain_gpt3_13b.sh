@@ -5,7 +5,7 @@
 
 export CUDA_DEVICE_MAX_CONNECTIONS=1
 
-GPUS_PER_NODE=4
+GPUS_PER_NODE=8
 MASTER_ADDR=localhost
 MASTER_PORT=6001
 NNODES=1
@@ -16,6 +16,7 @@ WORLD_SIZE=$(($GPUS_PER_NODE*$NNODES))
 VOCAB_FILE="/home/code/dataset/gpt2-vocab.json"
 MERGE_FILE="/home/code/dataset/gpt2-merges.txt"
 DATA_PATH="/home/code/dataset/BookCorpusDataset_text_document"
+
 
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
 SCRIPT_DIR="$SCRIPT_DIR/Megatron-LM"
@@ -30,13 +31,13 @@ DISTRIBUTED_ARGS="
 "
 
 GPT_ARGS="
-    --num-layers 32 \
-    --hidden-size 4096 \
-    --num-attention-heads 32 \
+    --num-layers 40 \
+    --hidden-size 5120 \
+    --num-attention-heads 64 \
     --seq-length 1024 \
     --max-position-embeddings 1024 \
-    --micro-batch-size 8 \
-    --global-batch-size 8 \
+    --micro-batch-size 16 \
+    --global-batch-size 16 \
     --lr 0.00015 \
     --train-iters 100 \
     --lr-decay-iters 320000 \
@@ -47,7 +48,8 @@ GPT_ARGS="
     --clip-grad 1.0 \
     --fp16 \
     --no-gradient-accumulation-fusion \
-    --tensor-model-parallel-size $WORLD_SIZE
+    --tensor-model-parallel-size $WORLD_SIZE \
+    --seed 3407
 "
 
 DATA_ARGS="
@@ -68,5 +70,6 @@ cmd="deepspeed --num_gpus $WORLD_SIZE \
     $DATA_ARGS \
     $OUTPUT_ARGS 
     " 
+
 # echo $cmd
 eval $cmd 
