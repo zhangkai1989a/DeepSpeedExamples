@@ -64,16 +64,6 @@ def forward_step(data_iterator, model):
         data_iterator)
     timers('batch-generator').stop()
     output_tensor = model(tokens, position_ids, attention_mask, labels=labels)
-    # start = torch.cuda.Event(enable_timing=True)
-    # end = torch.cuda.Event(enable_timing=True)
-    # start.record()
-    # output_tensor = model(tokens, position_ids, attention_mask, labels=labels)
-    # end.record()
-    # torch.cuda.synchronize()
-
-    # if is_rank_0():
-    #     print('forward time: ')
-    #     print(start.elapsed_time(end))
 
     return output_tensor, partial(loss_func, loss_mask)
 

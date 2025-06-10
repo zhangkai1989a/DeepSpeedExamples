@@ -460,7 +460,6 @@ def train(forward_step_func, model, optimizer, opt_param_scheduler,
                 time_list.append(ite_time)
 
 
-            # ite_time = timers('ite-time').elapsed(barrier=True)
             if iteration % args.log_interval == 0 and is_rank_0():
                 loss = loss_dict['lm loss'].item()
                 print( 'iteration: {} | loss: {:.3f} | iteration time (ms): {:.2f} '.format(iteration, loss, ite_time))
