@@ -2,11 +2,10 @@ import time
 import argparse
 import torch
 import os
-from torch_save_utils import PINNED_BUFFER_MB
+from torch_save_utils import PINNED_BUFFER_MB, load_io_ops
 from torch_save_utils import test_save, test_ds_mock_save, test_ds_py_save, test_ds_aio_fast_save, test_ds_gds_fast_save
 import deepspeed 
 from deepspeed.accelerator import get_accelerator
-import deepspeed.comm as dist
 import os 
 
 def run(args):
@@ -28,8 +27,6 @@ def run(args):
             continue 
         file = os.path.join(args.folder, f'{tag}_{args.mb_size}MB.pt')
         print(f'checkpoint file = {file}')
-        if os.path.isfile(file):
-            os.remove(file)
         st = time.time()
         write_sec = fn(file, buffer, args)
         gb_per_sec = args.mb_size / (1024.0 * write_sec)
@@ -53,9 +50,9 @@ def parse_arguments():
                         default=None,
                         required=True,
                         help='Size of tensor to save in MB.')
-    parser.add_argument('--legacy',
+    parser.add_argument('--zipfile',
                         action='store_true',
-                        help='Use torch legacy save format')
+                        help='Use torch zipfile save format')
 
     parser.add_argument('--gpu', action='store_true', help='Use gpu tensors.')
 
@@ -71,10 +68,6 @@ def parse_arguments():
     parser.add_argument('--single_io_buffer',
                         action='store_true',
                         help='Disable double buffering of i/o buffer.')
-    parser.add_argument('--local_rank',
-                        type=int,
-                        default=0,
-                        help='Local rank' )
 
     args = parser.parse_args()
     print(f'args = {args}')
@@ -89,9 +82,8 @@ def main():
     if not os.path.exists(args.folder):
         print(f'Invalid folder: {args.folder}')
         quit()
-    deepspeed.init_distributed()
+    load_io_ops(args)
     run(args)
-    dist.destroy_process_group()
 
 
 if __name__ == "__main__":
