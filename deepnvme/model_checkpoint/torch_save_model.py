@@ -2,11 +2,10 @@ import time
 import torch
 from torch.optim import Adam
 import os
-from torch_save_utils import test_save, test_ds_mock_save, test_ds_py_save, test_ds_aio_fast_save, test_ds_gds_fast_save
+from torch_save_utils import test_save, test_ds_mock_save, test_ds_py_save, test_ds_aio_fast_save, test_ds_gds_fast_save, load_io_ops
 from save_model_utils import get_model, validate_arguments, parse_arguments
 import deepspeed
 from deepspeed.accelerator import get_accelerator
-import deepspeed.comm as dist
 
 
 def run(model, model_name, ckpt_name, args):
@@ -23,8 +22,6 @@ def run(model, model_name, ckpt_name, args):
             continue 
         file = os.path.join(args.folder, f'{tag}_{ckpt_name}.pt')
         print(f'checkpoint file = {file}')
-        if os.path.isfile(file):
-            os.remove(file)
         st = time.time()
         write_sec = fn(file, model, args)
         ckpt_size = os.path.getsize(file)
@@ -59,8 +56,7 @@ def main():
     args = parse_arguments()
     if not validate_arguments(args):
         quit()
-
-    deepspeed.init_distributed()
+    load_io_ops(args)
     model, model_name, ckpt_name = get_model(args.model)
     if args.half:
         model = model.half()
@@ -72,7 +68,6 @@ def main():
     else:
         ckpt_state = {'model': model}
     run(ckpt_state, model_name, ckpt_name, args)
-    dist.destroy_process_group()
 
 
 if __name__ == "__main__":

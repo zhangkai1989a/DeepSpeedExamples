@@ -67,9 +67,9 @@ def parse_arguments():
                         default=0,
                         help='Local rank' )
 
-    parser.add_argument('--legacy',
+    parser.add_argument('--zipfile',
                         action='store_true',
-                        help='Use torch legacy save format')
+                        help='Use torch zipfile save format')
 
     parser.add_argument('--optimizer',
                         action='store_true',

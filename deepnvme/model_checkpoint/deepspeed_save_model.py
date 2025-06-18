@@ -8,6 +8,7 @@ import numpy as np
 import deepspeed
 from deepspeed.accelerator import get_accelerator
 from save_model_utils import get_model, validate_arguments, parse_arguments
+from torch_save_utils import load_io_ops
 
 def _get_ds_config(args, writer_type, use_gds):
     ds_config = {
@@ -26,7 +27,7 @@ def _get_ds_config(args, writer_type, use_gds):
             }
         },
         "checkpoint": {
-            "checkpoint_serialization": not args.legacy
+            "checkpoint_serialization": args.zipfile 
         },
         "aio": {
             "block_size": 8 * (1024**2),
@@ -64,11 +65,9 @@ def _do_optimizer_step(ds_engine):
 
 
 def _free_ds_memory(ds_engine):
-    ds_engine.optimizer.optimizer = None
-    ds_engine.optimizer = None
-    ds_engine.module = None
-    ds_engine = None
+    ds_engine.destroy()
     del ds_engine
+    ds_engine = None
     gc.collect()
     get_accelerator().empty_cache()
 
@@ -80,9 +79,11 @@ def test_save(tag, folder, model, args, writer_type):
     if args.zero_stage == 0:
         _do_optimizer_step(ds_engine)
 
+    import pdb; pdb.set_trace()
     st = time.time()
     ds_engine.save_checkpoint(save_dir=folder, tag=tag)
     write_sec = time.time() - st
+    import pdb; pdb.set_trace()
     _free_ds_memory(ds_engine)
     return write_sec
 
@@ -107,8 +108,6 @@ def run(model, model_name, ckpt_name, args):
         folder = os.path.join(args.folder, ckpt_name, tag)
         if os.path.exists(folder):
             shutil.rmtree(folder, ignore_errors=True)
-        # if not os.path.exists(folder):
-        #     os.makedirs(folder, exist_ok=True)
         write_sec = test_save(tag, folder, model, args, writer_type)
         ckpt_size = _get_folder_size(folder)
         gb_size = ckpt_size / (1024**3)
@@ -118,19 +117,32 @@ def run(model, model_name, ckpt_name, args):
         )
         print(f'*********************************************')
 
+def init_torch_distributed():
+    import torch.distributed as dist
+    from deepspeed.constants import TORCH_DISTRIBUTED_DEFAULT_PORT, CROSS_RANK, CROSS_SIZE
+    os.environ['MASTER_PORT'] = str(TORCH_DISTRIBUTED_DEFAULT_PORT)
+    os.environ['MASTER_ADDR'] = "localhost"
+    os.environ['LOCAL_RANK'] = str(0)
+    os.environ['WORLD_SIZE'] = str(1)
+    os.environ['CROSS_RANK'] = str(0)
+    os.environ['CROSS_SIZE'] = str(1)
+    dist.init_process_group(backend='nccl', rank=0, world_size=1)
+
+
 
 def main():
     print(
         f'Performance test of deepspeed integration of fast model checkpointing.'
     )
     print(f'torch version = {torch.__version__}')
+    init_torch_distributed()
     torch.manual_seed(42)
     np.random.seed(0)
     random.seed(0)
     args = parse_arguments()
     if not validate_arguments(args):
         quit()
-
+    load_io_ops(args)
     model, model_name, ckpt_name = get_model(args.model)
     run(model, model_name, ckpt_name, args)
 
