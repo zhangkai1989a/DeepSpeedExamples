@@ -13,6 +13,12 @@ AIO_SINGLE_SUBMIT = False
 AIO_OVERLAP_EVENTS = False
 PINNED_BUFFER_MB = 64
 
+def load_io_ops(args):
+    if AsyncIOBuilder().is_compatible(): 
+        AsyncIOBuilder().load(verbose=False)
+    if args.gpu and GDSBuilder().is_compatible():
+        GDSBuilder().load(verbose=False)
+
 
 def _get_aio_handle():
     h = AsyncIOBuilder().load(verbose=False).aio_handle(block_size=AIO_BLOCK_SIZE,
@@ -34,7 +40,7 @@ def test_save(file, buffer, args):
     st = time.time()
     torch.save(f=file,
                obj=buffer,
-               _use_new_zipfile_serialization=not args.legacy)
+               _use_new_zipfile_serialization=args.zipfile)
     return time.time() - st
 
 
@@ -43,7 +49,7 @@ def test_ds_mock_save(file, buffer, args):
     ds_mock_writer = MockFileWriter(file)
     torch.save(f=ds_mock_writer,
                obj=buffer,
-               _use_new_zipfile_serialization=not args.legacy)
+               _use_new_zipfile_serialization=args.zipfile)
     ds_mock_writer.close()  # Force flush to storage
     write_sec = time.time() - st
     if not args.no_statistics:
@@ -56,7 +62,7 @@ def test_ds_py_save(file, buffer, args):
     ds_py_writer = PyFileWriter(file)
     torch.save(f=ds_py_writer,
                obj=buffer,
-               _use_new_zipfile_serialization=not args.legacy)
+               _use_new_zipfile_serialization=args.zipfile)
     ds_py_writer.close()  # Force flush to storage
     write_sec = time.time() - st
     if not args.no_statistics:
@@ -96,7 +102,7 @@ def _test_ds_fast_save(file, buffer, args, use_gds):
                                     config=fast_writer_config)
     torch.save(f=ds_fast_writer,
                obj=buffer,
-               _use_new_zipfile_serialization=not args.legacy)
+               _use_new_zipfile_serialization=args.zipfile)
     ds_fast_writer.close()  # Force flush to storage
     write_sec = time.time() - st
     if not args.no_statistics:

@@ -1,27 +1,27 @@
+# This file is adapted from pretrain_gpt.sh in Megatron-LM
 # Copyright (c) 2022, NVIDIA CORPORATION.  All rights reserved.
-# This file is adapted from pretrain_llama.sh in Megatron-LM
 
-#!/bin/bash
+#!/bin/bash --login
 
 export CUDA_DEVICE_MAX_CONNECTIONS=1
- 
-GPUS_PER_NODE=2
-# Change for multinode config
+
+GPUS_PER_NODE=8
 MASTER_ADDR=localhost
-MASTER_PORT=6000
+MASTER_PORT=6001
 NNODES=1
 NODE_RANK=0
 WORLD_SIZE=$(($GPUS_PER_NODE*$NNODES))
  
-CHECKPOINT_PATH=checkpoint
-rm -rf $CHECKPOINT_PATH/*
+
 VOCAB_FILE="dataset/gpt2-vocab.json"
 MERGE_FILE="dataset/gpt2-merges.txt"
-DATA_PATH="dataset/my-gpt2_text_document"
+DATA_PATH="dataset/BookCorpusDataset_text_document"
+
 
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
+SCRIPT_DIR="$SCRIPT_DIR/Megatron-LM"
 export PYTHONPATH=$SCRIPT_DIR:$PYTHONPATH
- 
+
 DISTRIBUTED_ARGS="
     --nproc_per_node $GPUS_PER_NODE \
     --nnodes $NNODES \
@@ -30,21 +30,14 @@ DISTRIBUTED_ARGS="
     --master_port $MASTER_PORT
 "
 
-LLAMA_ARGS="
-    --llama-model \
-    --num-layers 2 \
-    --hidden-size 4096 \
-    --num-attention-heads 32 \
+GPT_ARGS="
+    --num-layers 40 \
+    --hidden-size 5120 \
+    --num-attention-heads 64 \
     --seq-length 1024 \
     --max-position-embeddings 1024 \
-    --position-embedding-type rope \
-    --swiglu \
-    --ffn-hidden-size 11008 \
-    --disable-bias-linear \
-    --normalization RMSNorm \
-    --layernorm-epsilon 1e-6 \
-    --micro-batch-size 8 \
-    --global-batch-size 8 \
+    --micro-batch-size 16 \
+    --global-batch-size 16 \
     --lr 0.00015 \
     --train-iters 100 \
     --lr-decay-iters 320000 \
@@ -54,9 +47,9 @@ LLAMA_ARGS="
     --lr-warmup-fraction .01 \
     --clip-grad 1.0 \
     --fp16 \
+    --no-gradient-accumulation-fusion \
     --tensor-model-parallel-size $WORLD_SIZE \
-    --seed 3407 \
-    --causal-lm
+    --seed 3407
 "
 
 DATA_ARGS="
@@ -68,16 +61,15 @@ DATA_ARGS="
  
 OUTPUT_ARGS="
     --log-interval 1 \
-    --save-interval 10000 \
-    --eval-interval 1000 \
     --eval-iters 1
 "
 
 cmd="deepspeed --num_gpus $WORLD_SIZE \
-    pretrain_llama.py \
-    $LLAMA_ARGS \
+    pretrain_gpt.py \
+    $GPT_ARGS \
     $DATA_ARGS \
     $OUTPUT_ARGS 
-    "
-echo $cmd
+    " 
+
+# echo $cmd
 eval $cmd 
