@@ -23,7 +23,7 @@ fi
 if [[ ${XFER} == "cpu" ]]; then
     xfer_opt=""
 elif [[ ${XFER} == "gpu" ]]; then
-    xfer_opt="--gpu"
+    xfer_opt="--gpu --use_accelerator_pin_memory"
 elif [[ ${XFER} == "gds" ]]; then 
     xfer_opt="--gpu --use_gds"
 else

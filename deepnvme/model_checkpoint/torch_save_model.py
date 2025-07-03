@@ -57,7 +57,7 @@ def main():
     if not validate_arguments(args):
         quit()
     load_io_ops(args)
-    model, model_name, ckpt_name = get_model(args.model)
+    model, tokenizer, model_name, ckpt_name = get_model(args.model)
     if args.half:
         model = model.half()
     if args.gpu:

@@ -1,6 +1,6 @@
 import argparse
 import os
-from transformers import AutoModelForCausalLM
+from transformers import AutoModelForCausalLM, AutoTokenizer
 from transformers import T5ForConditionalGeneration
 from torch_save_utils import PINNED_BUFFER_MB
 
@@ -23,10 +23,13 @@ def _get_hf_model(tag):
     model_name = HF_MODELS_DICT[tag]
     if tag == TINY_T5:
         model = T5ForConditionalGeneration.from_pretrained(model_name)
+
     else:
         model = AutoModelForCausalLM.from_pretrained(model_name)
+    tokenizer = AutoTokenizer.from_pretrained(model_name)
 
-    return model, model_name, tag
+
+    return model, tokenizer, model_name, tag
 
 def get_model(model_tag):
     return _get_hf_model(model_tag)
@@ -108,6 +111,13 @@ def parse_arguments():
                         action='store_true',
                         help='Disable double buffering of i/o buffer.')
 
+    parser.add_argument('--safetensors',
+                        action='store_true',
+                        help='Use safetensors load/save.')
+
+    parser.add_argument('--regular_torch_save',
+                        action='store_true',
+                        help='Use vanilla torch.save.')
 
     #parser.add_argument('--single_writer', action='store_true', help='Disable parallel rank writes of data parallel (replicated) state')
 
