@@ -1,10 +1,13 @@
 #!/usr/bin/env python
 # Copyright (c) Microsoft Corporation.
 # SPDX-License-Identifier: Apache-2.0
-
+#%%
 # DeepSpeed Team
 import argparse
 import math
+import sys 
+import warnings
+warnings.filterwarnings("ignore")
 
 import torch
 from torch.utils.data import DataLoader, RandomSampler, SequentialSampler
@@ -211,16 +214,19 @@ def parse_args():
 def main():
     args = parse_args()
 
-    if args.local_rank == -1:
+    if args.local_rank == -1: #单卡模式
         device = torch.device(get_accelerator().device_name())
-    else:
+        args.global_rank = 0
+        args.world_size = 1
+    else: #多卡模式
         get_accelerator().set_device(args.local_rank)
         device = torch.device(get_accelerator().device_name(), args.local_rank)
         # Initializes the distributed backend which will take care of sychronizing nodes/GPUs
         # torch.distributed.init_process_group(backend='nccl')
         deepspeed.init_distributed()
-
-    args.global_rank = torch.distributed.get_rank()
+        args.global_rank = torch.distributed.get_rank()
+        args.world_size = torch.distributed.get_world_size()
+        
 
     ds_config = get_train_ds_config(offload=args.offload,
                                     dtype=args.dtype,
@@ -228,16 +234,14 @@ def main():
                                     enable_tensorboard=args.enable_tensorboard,
                                     tb_path=args.tensorboard_path,
                                     tb_name="step1_model")
-    ds_config[
-        'train_micro_batch_size_per_gpu'] = args.per_device_train_batch_size
-    ds_config[
-        'train_batch_size'] = args.per_device_train_batch_size * torch.distributed.get_world_size(
-        ) * args.gradient_accumulation_steps
+    ds_config['train_micro_batch_size_per_gpu'] = args.per_device_train_batch_size
+    ds_config['train_batch_size'] = args.per_device_train_batch_size * args.world_size * args.gradient_accumulation_steps
 
     # If passed along, set the training seed now.
     set_random_seed(args.seed)
 
-    torch.distributed.barrier()
+    if args.local_rank != -1:
+        torch.distributed.barrier()
 
     # load_hf_tokenizer will get the correct tokenizer and set padding tokens based on the model family
     additional_special_tokens = args.eot_token if args.add_eot_token else None
@@ -395,6 +399,7 @@ def main():
                                   args.output_dir,
                                   zero_stage=args.zero_stage)
 
-
+#%%
 if __name__ == "__main__":
+    sys.argv=['main.py', '--local_rank','-1', '--model_name_or_path', 'facebook/opt-1.3b', '--per_device_train_batch_size', '2', '--per_device_eval_batch_size', '2', '--gradient_accumulation_steps', '8', '--lora_dim', '128', '--zero_stage', '0', '--enable_tensorboard', '--tensorboard_path', './output', '--deepspeed', '--output_dir', './output']
     main()
