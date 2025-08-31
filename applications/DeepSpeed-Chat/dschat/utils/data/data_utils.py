@@ -293,11 +293,15 @@ def create_prompt_dataset(local_rank,
     eval_fname = f"{output_path}/evaldata_{fname}.pt"
 
     cache_found = os.path.isfile(train_fname) and os.path.isfile(eval_fname)
-    buf_create_cache = torch.ByteTensor([not cache_found]).to(
-        get_accelerator().current_device_name())
-    torch.distributed.all_reduce(buf_create_cache)
+    is_distributed = torch.distributed.is_initialized()
+    if is_distributed:
+        buf_create_cache = torch.ByteTensor([not cache_found]).to(get_accelerator().current_device_name())
+        torch.distributed.all_reduce(buf_create_cache)
+        should_create_cache = (buf_create_cache.item() != 0 or reload)
+    else:
+        should_create_cache = (not cache_found or reload)
 
-    if local_rank <= 0 and (buf_create_cache.item() != 0 or reload):
+    if local_rank <= 0 and should_create_cache:
         print(f'Creating prompt dataset {data_path}, {reload=}')
         if len(data_path) == 1:  # Single dataset.
             train_dataset, eval_dataset = create_dataset(
@@ -374,7 +378,8 @@ def create_prompt_dataset(local_rank,
                 eval_dataset = Subset(eval_dataset, shuffle_idx.tolist())
         torch.save(train_dataset, train_fname)
         torch.save(eval_dataset, eval_fname)
-    torch.distributed.barrier()
+    if torch.distributed.is_initialized():
+        torch.distributed.barrier()
     return torch.load(train_fname,
                       weights_only=False), torch.load(eval_fname,
                                                       weights_only=False)

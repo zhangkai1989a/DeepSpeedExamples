@@ -403,3 +403,5 @@ def main():
 if __name__ == "__main__":
     sys.argv=['main.py', '--local_rank','-1', '--model_name_or_path', 'facebook/opt-1.3b', '--per_device_train_batch_size', '2', '--per_device_eval_batch_size', '2', '--gradient_accumulation_steps', '8', '--lora_dim', '128', '--zero_stage', '0', '--enable_tensorboard', '--tensorboard_path', './output', '--deepspeed', '--output_dir', './output']
     main()
+
+# %%
